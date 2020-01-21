@@ -12,21 +12,26 @@ import math
 pas_translation_x = 0.1
 pas_translation_y = 0.1
 pas_translation_z = 0.1
-pas_rotation_alpha = 1 # angle en degré
+pas_rotation_alpha = 1 # angle en degrés
 pas_rotation_beta = 1
 pas_rotation_gama = 1
-pas_maximal = np.array([[pas_translation_x, pas_translation_y, pas_translation_z, pas_rotation_alpha, pas_rotation_beta, pas_rotation_gama]])
+pas_maximal = np.array([pas_translation_x, pas_translation_y, pas_translation_z, pas_rotation_alpha, pas_rotation_beta, pas_rotation_gama])
 
 
 def calcul_pas_adapte(origine, destination, pas_maximal):
-    diff = np.zeros((1,6))
-    pas = np.zeros((1,6))
+    diff = np.zeros(6)
+    pas = np.zeros(6)
     for i in range(6):
         diff[0][i] = destination[0][i] - origine[0][i]
+        # (TBR)
+        # Renommer pas en quelque chose de plus explicite, ce n'est pas un pas !
         pas[0][i] = diff[0][i] / pas_maximal[0][i]
+    # (TBR)
+    # Attention, pas n'est pas constitué de nombres dans ta formule, donc ce ne
+    # peut pas être le nombre de pas.
     nombre_pas = np.amax(pas)
     return nombre_pas
-            
+
     # origine est un vecteur à 6 dimensions (3 positions et 3 angles), idem pour la destination. Leur type est np.array.
     # Notez que pas maximal est aussi un vecteur à 6 dimensions, qui contient le maximal que l'on s'autorise dans chaque dimension.
 
@@ -37,21 +42,28 @@ def calcul_pas_adapte(origine, destination, pas_maximal):
     # On renvoie enfin le nombre de pas à faire (un entier) et la longueur de ces pas (un flottant).
 
 #Test
-origine = np.array([[0,0,0,0,0,0]])
+origine = np.zeros((1,5))
 destination = np.array([[5,4,3,50,40,30]])
 n = calcul_pas_adapte(origine, destination, pas_maximal)
 
 trajectoire_souhaitee = np.append(trajectoire_souhaitee, origine, 0)
 
 def discretisation_trajectoire(nombre_pas, trajectoire_souhaitee, pas_maximal):
-    
+
     n = nombre_pas
-    
+
     trj = []
     var = []
-    for 
+    # (TBR)
+    # Ce n'est pas une syntaxe valide en Python, qu'est-ce que tu essaie de
+    # faire ?
+    for
         trj.append(pts[i])
-        for j in range (1, math.floor(pas[i])): # (TBR) pas[i] est déjà un entier (puisque ce n'est pas un pas), d'illeurs ici tu l'utilise comme ce qu'il est réellement, à savoir le nombre de pas nécessaires pour passer de pts[i] à pts[i+1]. Le math.floor n'est pas très utile ici.
+        for j in range (1, math.floor(pas[i])): # (TBR)
+        # pas[i] est déjà un entier (puisque ce n'est pas un pas), d'ailleurs
+        # ici tu l'utilise comme ce qu'il est réellement, à savoir le nombre de
+        # pas nécessaires pour passer de pts[i] à pts[i+1]. Le math.floor n'est
+        # donc pas très utile ici.
             x = pts[i][0] + j * (pts[i+1][0] - pts[i][0])/pas[i]
             y = pts[i][1] + j * (pts[i+1][1] - pts[i][1])/pas[i]
             z = pts[i][2] + j * (pts[i+1][2] - pts[i][2])/pas[i]
@@ -68,7 +80,7 @@ def discretisation_trajectoire(nombre_pas, trajectoire_souhaitee, pas_maximal):
     var.append([0,0,0]) #Dernière variation
     # (TBR) Je ne pense pas qu'il soit nécessaire d'ajouter une variation nulle à la fin, il n'y a pas d'obligation à ce que trj et var aient la même taille
     return [var,trj]
-    
+
     # On passe en passe en argument la trajectoire souhaitée, qui est une liste de tableaux numpy, chaque tableau numpy ayant 6 dimensions, 3 positions + 3 angles.
     # pas_maximal est défini comme dans calcul_pas_adapte
 

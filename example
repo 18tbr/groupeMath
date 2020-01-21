@@ -1,1 +1,16 @@
-Un fichier d'exemple
+#!/usr/bin/python3
+import numpy as np
+
+L = [i for i in range(4)]
+arrL = np.array(L)
+
+print(arrL)
+
+arrO = np.zeros(5)
+print(arrO)
+
+arrOO = np.zeros((4,5))
+print(arrOO)
+
+arrO[4] = 2
+print(arrO)
