@@ -12,7 +12,7 @@ import math
 pas_translation_x = 0.1
 pas_translation_y = 0.1
 pas_translation_z = 0.1
-pas_rotation_alpha = 1 # angle en degrés
+pas_rotation_alpha = 1 # angle en degré
 pas_rotation_beta = 1
 pas_rotation_gama = 1
 pas_maximal = np.array([pas_translation_x, pas_translation_y, pas_translation_z, pas_rotation_alpha, pas_rotation_beta, pas_rotation_gama])
@@ -20,18 +20,13 @@ pas_maximal = np.array([pas_translation_x, pas_translation_y, pas_translation_z,
 
 def calcul_pas_adapte(origine, destination, pas_maximal):
     diff = np.zeros(6)
-    pas = np.zeros(6)
+    nombre_pas = np.zeros(6)
     for i in range(6):
-        diff[0][i] = destination[0][i] - origine[0][i]
-        # (TBR)
-        # Renommer pas en quelque chose de plus explicite, ce n'est pas un pas !
-        pas[0][i] = diff[0][i] / pas_maximal[0][i]
-    # (TBR)
-    # Attention, pas n'est pas constitué de nombres dans ta formule, donc ce ne
-    # peut pas être le nombre de pas.
-    nombre_pas = np.amax(pas)
-    return nombre_pas
-
+        diff[i] = destination[i] - origine[i]
+        nombre_pas[i] = diff[i] / pas_maximal[i]
+    nombre_pas_max = np.amax(nombre_pas)
+    return nombre_pas_max
+            
     # origine est un vecteur à 6 dimensions (3 positions et 3 angles), idem pour la destination. Leur type est np.array.
     # Notez que pas maximal est aussi un vecteur à 6 dimensions, qui contient le maximal que l'on s'autorise dans chaque dimension.
 
@@ -42,45 +37,41 @@ def calcul_pas_adapte(origine, destination, pas_maximal):
     # On renvoie enfin le nombre de pas à faire (un entier) et la longueur de ces pas (un flottant).
 
 #Test
-origine = np.zeros((1,5))
-destination = np.array([[5,4,3,50,40,30]])
+origine = np.array([0,0,0,0,0,0])
+destination = np.array([0.5,0,0,0,0,0])
 n = calcul_pas_adapte(origine, destination, pas_maximal)
 
-trajectoire_souhaitee = np.append(trajectoire_souhaitee, origine, 0)
+#Definir la trajectoire_souhaitee
+trajectoire_souhaitee = np.array([origine], dtype = float)
+trajectoire_souhaitee = np.insert(trajectoire_souhaitee, 1, destination, 0)
+
 
 def discretisation_trajectoire(nombre_pas, trajectoire_souhaitee, pas_maximal):
-
-    n = nombre_pas
-
-    trj = []
-    var = []
-    # (TBR)
-    # Ce n'est pas une syntaxe valide en Python, qu'est-ce que tu essaie de
-    # faire ?
-    for
-        trj.append(pts[i])
-        for j in range (1, math.floor(pas[i])): # (TBR)
-        # pas[i] est déjà un entier (puisque ce n'est pas un pas), d'ailleurs
-        # ici tu l'utilise comme ce qu'il est réellement, à savoir le nombre de
-        # pas nécessaires pour passer de pts[i] à pts[i+1]. Le math.floor n'est
-        # donc pas très utile ici.
-            x = pts[i][0] + j * (pts[i+1][0] - pts[i][0])/pas[i]
-            y = pts[i][1] + j * (pts[i+1][1] - pts[i][1])/pas[i]
-            z = pts[i][2] + j * (pts[i+1][2] - pts[i][2])/pas[i]
-            # (TBR) Inverse l'ordre de tes calculs, cela te simplifiera la vie en rendant le code plus lisible. Commence par calculer dx, dy et dz (avant de rentrer dans la boucle, ils ne dépendent pas de j après tout) puis dans la boucle tu pourras faire des "+ j * dz" etc...
-            dx = (pts[i+1][0] - pts[i][0])/pas[i]
-            dy = (pts[i+1][1] - pts[i][1])/pas[i]
-            dz = (pts[i+1][2] - pts[i][2])/pas[i]
-            var.append([dx,dy,dz])
-            trj.append([x,y,z])
-    trj.append(pts[len(pts)-1])
-    var.append([pts[len(pts)-1][0]-(pts[i][0] + (math.floor(pas[i])-1) * (pts[i+1][0] - pts[i][0])/pas[i]),
-                pts[len(pts)-1][1]-(pts[i][1] + (math.floor(pas[i])-1) * (pts[i+1][1] - pts[i][1])/pas[i]),
-                pts[len(pts)-1][2]-(pts[i][2] + (math.floor(pas[i])-1) * (pts[i+1][2] - pts[i][2])/pas[i])]) #Avant-dernière variation
-    var.append([0,0,0]) #Dernière variation
-    # (TBR) Je ne pense pas qu'il soit nécessaire d'ajouter une variation nulle à la fin, il n'y a pas d'obligation à ce que trj et var aient la même taille
-    return [var,trj]
-
+    
+    variation = np.array([[0,0,0,0,0,0]])
+    
+    dx = (trajectoire_souhaitee[1][0] - trajectoire_souhaitee[0][0])/nombre_pas
+    dy = (trajectoire_souhaitee[1][1] - trajectoire_souhaitee[0][1])/nombre_pas
+    dz = (trajectoire_souhaitee[1][2] - trajectoire_souhaitee[0][2])/nombre_pas
+    dalpha = (trajectoire_souhaitee[1][3] - trajectoire_souhaitee[0][3])/nombre_pas
+    dbeta = (trajectoire_souhaitee[1][4] - trajectoire_souhaitee[0][4])/nombre_pas
+    dgama = (trajectoire_souhaitee[1][5] - trajectoire_souhaitee[0][5])/nombre_pas
+    
+    for i in range (1, math.ceil(nombre_pas)): 
+        
+        x = trajectoire_souhaitee[0][0] + i * dx
+        y = trajectoire_souhaitee[0][1] + i * dy
+        z = trajectoire_souhaitee[0][2] + i * dz
+        alpha = trajectoire_souhaitee[0][3] + i * dalpha
+        beta = trajectoire_souhaitee[0][4] + i * dbeta
+        gama = trajectoire_souhaitee[0][5] + i * dgama
+        
+        trajectoire_souhaitee = np.insert(trajectoire_souhaitee, i, [x,y,z,alpha,beta,gama], 0)
+        print([[dx,dy,dz,dalpha,dbeta,dgama]])
+        variation = np.insert(variation, i, [dx,dy,dz,dalpha,dbeta,dgama],0)
+        
+    return [trajectoire_souhaitee, variation]
+    
     # On passe en passe en argument la trajectoire souhaitée, qui est une liste de tableaux numpy, chaque tableau numpy ayant 6 dimensions, 3 positions + 3 angles.
     # pas_maximal est défini comme dans calcul_pas_adapte
 
@@ -88,10 +79,15 @@ def discretisation_trajectoire(nombre_pas, trajectoire_souhaitee, pas_maximal):
 
     # Cette fonction renvoie une liste non pas des points par lesquels il faut passer (on n'en a pas besoin, mais si vous le souhaitez vous pouvez aussi renvoyer cette liste pour tracer des courbes), mais plutôt des déplacements infinitésimaux qu'il faut pour passer d'un point à un autre.
     # Chacun de ces déplacements infintésimaux est un np.array de 6 dimensions, 3 déplacements en position et 3 déplacements angulaires.
-    pass
+
+#Test
+[trj, var] = discretisation_trajectoire(n, trajectoire_souhaitee, pas_maximal)
+# la trajectoire a l'air de marcher, mais je comprends pas pourquoi la vararion donne tjrs 0
+
+
+
 
 # np.array, dans une gande liste
-# donner les deplacements
 
 
 ##################### Deuxième partie : Longueur des câbles ####################
