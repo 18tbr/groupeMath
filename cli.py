@@ -2,10 +2,11 @@ import os
 import sys
 import pickle   # pickle is in stdlib so we won't ever get an import error here.
 import argparse # same, argparse is part of stdlib
+from textwrap import fill # same, part of stdlib
 try:
     import numpy as np
 except ImportError:
-    print("---X This tools requires the numpy module, which seems currently unavailable. Please install numpy before tying to use this tool. Th recommended syntax to install numpy is :\n$ python3 -m pip install numpy")
+    print("---X This tools requires the numpy module, which seems currently unavailable. Please install numpy before tying to use this tool. The recommended syntax to install numpy is :\n$ python3 -m pip install numpy")
     sys.exit(1)
 try:
     import cable_robot as cr    # Our module to command the robot.
@@ -36,7 +37,6 @@ class CLI(object):
         # Safe mode, annoys users for their safety
         self.safe = not cli_args.unsafe
         self.speed_limit = 100  # steps per second, above that value the robot is deemed unstable.
-        print(cli_args.profile)
 
     def read_command(self, command):
         # cursor is used to keep track of how many argument we read from the users command.
@@ -308,15 +308,19 @@ class CLI(object):
 
     def bprint(self, msg, mode = 0):
         # mode 0 means information, 1 means warning and 2 means error
+        wrapped_msg_list = []
+        for line in iter(msg.splitlines()):
+            wrapped_msg_list.append(fill(line, width=80))
+        wrapped_msg = "\n".join(wrapped_msg_list)
         if mode >= self.silence:
             if mode == 1:
-                print(f"---! {msg}")
+                print(f"---! {wrapped_msg}")
                 return
             elif mode == 2:
-                print(f"---X {msg}")
+                print(f"---X {wrapped_msg}")
                 return
             else:   # i.e. mode == 0
-                print(f"---> {msg}")
+                print(f"---> {wrapped_msg}")
                 return
         # else ... be silent of course.
 
