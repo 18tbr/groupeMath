@@ -10,9 +10,9 @@ from pylab import *
 
 # La première chose est de découper cette trajectoire en une série de petits pas à faire. La démarche que vous avez proposée me semble être la bonne, don on va la suivre.
 
-pas_translation_x = 0.1 #longeur en m
-pas_translation_y = 0.1
-pas_translation_z = 0.1
+pas_translation_x = 0.01 #longeur en m
+pas_translation_y = 0.01
+pas_translation_z = 0.01
 pas_rotation_alpha = 3.14/180 # angle en radian
 pas_rotation_beta = 3.14/180
 pas_rotation_gama = 3.14/180
@@ -25,7 +25,7 @@ def calcul_pas_adapte(origine, destination, pas_maximal):
     for i in range(6):
         diff[i] = destination[i] - origine[i]
         nombre_pas[i] = diff[i] / pas_maximal[i]
-    nombre_pas_max = np.amanombre_pas)
+    nombre_pas_max = np.amax(nombre_pas)
     return nombre_pas_max
 
     # origine est un vecteur à 6 dimensions (3 positions et 3 angles), idem pour la destination. Leur type est np.array.
@@ -40,12 +40,7 @@ def calcul_pas_adapte(origine, destination, pas_maximal):
 #Test
 
 
-#Definir la trajectoire_souhaitee
-origine = np.array([0,0,0,0,0,0])
-destination = np.array([5,5,5,0,0,0])
 
-trajectoire_souhaitee = np.array([origine], dtype = float)
-trajectoire_souhaitee = np.insert(trajectoire_souhaitee, 1, destination, 0)
 
 
 def discretisation_trajectoire(trajectoire_souhaitee, pas_maximal):
@@ -167,7 +162,7 @@ def reconstruction_coins(position_mobile, dimensions_physiques_mobile):
     # - 2 : On oriente le mobile pour qu'il soit aligné avec l'orientation donnée par base_mobile (en utilisant des matrices de rotation pour arriver à l'orientation souhaitée depuis l'orientation d'origine du hangar).
     # - 3 : On déplace le mobile pour que son centre se retrouve à la position donnée par position_mobile.
 
-    # Cette fonction renverra un liste de 8 éléments des positions des huit coins dans l'espace. La position d'un coin sera un np.array de dimension 3 (x, y et z)
+    # Cette fonction renverra un liste de 8 éléments des positions des huits coins dans l'espace. La position d'un coin sera un np.array de dimension 3 (x, y et z)
 
 
     #1
@@ -177,7 +172,7 @@ def reconstruction_coins(position_mobile, dimensions_physiques_mobile):
 
 
     #2
-    orientation = position_mobile[2:6]
+    orientation = position_mobile[3:6]
     rotation_mobile=rotation(orientation)
 
     #3
@@ -202,15 +197,17 @@ def calcul_longueurs_cables(positions_coins_mobile, positions_coins_hangar):
 
     # Cette fonction renverra un np.array de 8 éléments, le ième élément correspondant à la longueur du ième câble.
 
-     numerotationHangar = [i for i in range(8)]
-     numerotationCableBoite= [6,7,4,5,2,3,0,1] # on est pour le mobile on a donc numéroté les coins du hangar et les cables qui y sont associés (eg : le coinMobile en face du coinHangar6 est 0)
-     longueurCable=np.zeros(8)
 
-     for i in range(8) :
-        vecteurCoins= positions_coins_mobile[i] - positions_coins_hangar[i]
+
+    numerotationHangar = [i for i in range(8)]
+    numerotationCableBoite= [6,7,4,5,2,3,0,1] # on est pour le mobile on a donc numéroté les coins du hangar et les cables qui y sont associés (eg : le coinMobile en face du coinHangar6 est 0)
+    longueurCable=np.zeros(8)
+
+    for i in range(8) :
+        vecteurCoins= positions_coins_mobile[numerotationCableBoite[i]] - positions_coins_hangar[i]
         longueurCable[i] = np.linalg.norm(vecteurCoins)
-     return longueurCable
-     pass
+    return longueurCable
+    pass
 
 
 
@@ -242,6 +239,7 @@ def commande_longeurs_cables(trajectoire_discretisee, dimensions_physiques_mobil
 
     longueursCableInit= calcul_longueurs_cables(coinsPositionInit, coinsHangar)
     tableauVarLongueur=[]
+    tableauLongueur=[]
     for n in range(1,nombreIteration):
 
 
@@ -250,22 +248,34 @@ def commande_longeurs_cables(trajectoire_discretisee, dimensions_physiques_mobil
         nouvellesLongueursCables = calcul_longueurs_cables(coinsNouvellePosition, coinsHangar)
         variationLongueur=nouvellesLongueursCables-longueursCableInit
         tableauVarLongueur+=[variationLongueur]
+        tableauLongueur+=[nouvellesLongueursCables]
         longueursCableInit=nouvellesLongueursCables
         positionInitiale=nouvellePosition
 
 
-    return tableauVarLongueur #on retourne une liste des variations de longueur des cables
+    return [tableauVarLongueur,tableauLongueur] #on retourne une liste des variations de longueur des cables
     pass
+
+
+
+#Definir la trajectoire_souhaitee
+origine = np.array([0,0,0,0,0,0])
+destination = np.array([0.5,0.5,0.5,0,0,0])
+
+trajectoire_souhaitee = np.array([origine], dtype = float)
+trajectoire_souhaitee = np.insert(trajectoire_souhaitee, 1, destination, 0)
 centre = np.array([0,0,0,0,0,0])
-dimension=np.array([2,2,2])
+dimension=np.array([0.25,0.25,0.3])
 coinsMobile= (reconstruction_coins(centre,dimension))
 
 
-dimensionHangar = np.array([20,20,20])
+dimensionHangar = np.array([1.25,1.25,1])
 coinsHangar = construction_rectangle(dimensionHangar, False)
 print(calcul_longueurs_cables(coinsMobile,coinsHangar))
 
-varlongueurCable=(commande_longeurs_cables(discretisation_trajectoire(trajectoire_souhaitee, pas_maximal), dimension, dimensionHangar))
+varlongueurCable=commande_longeurs_cables(discretisation_trajectoire(trajectoire_souhaitee, pas_maximal), dimension, dimensionHangar)[0]
+longueurCable=commande_longeurs_cables(discretisation_trajectoire(trajectoire_souhaitee, pas_maximal), dimension, dimensionHangar)[1]
+
 
 var0=[]
 var1=[]
@@ -277,6 +287,9 @@ var6=[]
 var7=[]
 
 n= len(varlongueurCable)
+print(var[0])
+print(n)
+
 for i in range(n):
     var0=var0+[varlongueurCable[i][0]]
     var1=var1+[varlongueurCable[i][1]]
@@ -287,7 +300,9 @@ for i in range(n):
     var6=var6+[varlongueurCable[i][6]]
     var7=var7+[varlongueurCable[i][7]]
 
-x=linspace(0,n)
+subplot(1,2,1)
+
+x=list(range(n))
 plot(x, var0, label='Cable 0')
 plot(x, var1, label='Cable 1')
 plot(x, var2, label='Cable 2')
@@ -296,7 +311,37 @@ plot(x, var4, label='Cable 4')
 plot(x, var5, label='Cable 5')
 plot(x, var6, label='Cable 6')
 plot(x, var7, label='Cable 7')
+legend()
 
+long0=[]
+long1=[]
+long2=[]
+long3=[]
+long4=[]
+long5=[]
+long6=[]
+long7=[]
+
+for i in range(n):
+    long0=long0+[longueurCable[i][0]]
+    long1=long1+[longueurCable[i][1]]
+    long2=long2+[longueurCable[i][2]]
+    long3=long3+[longueurCable[i][3]]
+    long4=long4+[longueurCable[i][4]]
+    long5=long5+[longueurCable[i][5]]
+    long6=long6+[longueurCable[i][6]]
+    long7=long7+[longueurCable[i][7]]
+
+subplot(1,2,2)
+
+plot(x, long0, label='Cable 0')
+plot(x, long1, label='Cable 1')
+plot(x, long2, label='Cable 2')
+plot(x, long3, label='Cable 3')
+plot(x, long4, label='Cable 4')
+plot(x, long5, label='Cable 5')
+plot(x, long6, label='Cable 6')
+plot(x, long7, label='Cable 7')
 show()
 ######################## Troisième partie : Commande du robot ##################
 
