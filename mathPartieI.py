@@ -3,22 +3,35 @@
 # On suppose que l'on a une série de points en entrée, on s'occupera de ce détail plus tard.
 # On considère le pas de temps comme imposé dans la cadre arduino
 
-import numpy as np  # Le code qui gère les rotations, etc... A besoin de numpy donc pour éviter les problèmes le plus simple est que tout le monde utilise numpy.
+import numpy as np
 import math
 from pylab import *
+
 ############### Première partie : Discrétisation de la trajectoire ############
 
-# La première chose est de découper cette trajectoire en une série de petits pas à faire. La démarche que vous avez proposée me semble être la bonne, don on va la suivre.
-
-pas_translation_x = 0.01 #longeur en m
+# longeur en m
+pas_translation_x = 0.01
 pas_translation_y = 0.01
 pas_translation_z = 0.01
-pas_rotation_alpha = 3.14/180 # angle en radian
+# angle en radian
+pas_rotation_alpha = 3.14/180
 pas_rotation_beta = 3.14/180
-pas_rotation_gama = 3.14/180
-pas_maximal = np.array([pas_translation_x, pas_translation_y, pas_translation_z, pas_rotation_alpha, pas_rotation_beta, pas_rotation_gama])
+pas_rotation_gamma = 3.14/180
+# vecteur
+pas_maximal = np.array([pas_translation_x, pas_translation_y,
+                        pas_translation_z, pas_rotation_alpha,
+                        pas_rotation_beta, pas_rotation_gamma])
+
 
 def calcul_pas_adapte(array, pas_maximal):
+    """
+    Donne le nombre de pas à effectuer pour une étape dans la trajectoire
+
+    :param array: Trajectoire
+    :param pas_maximal: vecteur des pas
+    :type array: np.array
+    :type pas_maximal: np.array de taille 6
+    """
     length = array.shape[0] - 1
     nombre_pas_max = np.zeros(length)
 
@@ -29,7 +42,7 @@ def calcul_pas_adapte(array, pas_maximal):
             diff[i] = abs(array[j + 1][i] - array[j][i])
             nombre_pas[i] = diff[i] / pas_maximal[i]
         nombre_pas_max[j] = np.amax(nombre_pas)
-        nombre_pas_max[j] = ceil( nombre_pas_max[j] )
+        nombre_pas_max[j] = ceil(nombre_pas_max[j])
 
     return nombre_pas_max
 
@@ -42,18 +55,20 @@ def calcul_pas_adapte(array, pas_maximal):
 
     # On renvoie enfin le nombre de pas à faire (un entier) et la longueur de ces pas (un flottant).
 
-#Test of calcul_pas_adapte
+
+# Test of calcul_pas_adapte
 array = np.random.rand(10, 6)
 trajectoire_souhaitee = array
-#n = calcul_pas_adapte(trajectoire_souhaitee, pas_maximal)
+# n = calcul_pas_adapte(trajectoire_souhaitee, pas_maximal)
+
 
 def discretisation_trajectoire(trajectoire_souhaitee, pas_maximal):
     length = trajectoire_souhaitee.shape[0] - 1
     nombre_pas_max = calcul_pas_adapte(trajectoire_souhaitee, pas_maximal)
 
-    #Initialisation of the output arrays
-    traj_disc = np.array([[0.,0.,0.,0.,0.,0.]])
-    var_disc = np.array([[0.,0.,0.,0.,0.,0.]])
+    # Initialisation of the output arrays
+    traj_disc = np.array([[0., 0., 0., 0., 0., 0.]])
+    var_disc = np.array([[0., 0., 0., 0., 0., 0.]])
 
     for j in range(length):
 
@@ -62,18 +77,18 @@ def discretisation_trajectoire(trajectoire_souhaitee, pas_maximal):
         dz = (trajectoire_souhaitee[j+1][2] - trajectoire_souhaitee[j][2])/nombre_pas_max[j]
         dalpha = (trajectoire_souhaitee[j+1][3] - trajectoire_souhaitee[j][3])/nombre_pas_max[j]
         dbeta = (trajectoire_souhaitee[j+1][4] - trajectoire_souhaitee[j][4])/nombre_pas_max[j]
-        dgama = (trajectoire_souhaitee[j+1][5] - trajectoire_souhaitee[j][5])/nombre_pas_max[j]
+        dgamma = (trajectoire_souhaitee[j+1][5] - trajectoire_souhaitee[j][5])/nombre_pas_max[j]
 
-        for i in range (0, math.ceil(nombre_pas_max[j])):
+        for i in range(0, math.ceil(nombre_pas_max[j])):
             x = trajectoire_souhaitee[j][0] + i * dx
             y = trajectoire_souhaitee[j][1] + i * dy
             z = trajectoire_souhaitee[j][2] + i * dz
             alpha = trajectoire_souhaitee[j][3] + i * dalpha
             beta = trajectoire_souhaitee[j][4] + i * dbeta
-            gama = trajectoire_souhaitee[j][5] + i * dgama
+            gamma = trajectoire_souhaitee[j][5] + i * dgamma
 
-            traj_disc = np.concatenate((traj_disc,[[x,y,z,alpha,beta,gama]]))
-            var_disc = np.concatenate((var_disc,[[dx,dy,dz,dalpha,dbeta,dgama]]))
+            traj_disc = np.concatenate((traj_disc, [[x, y, z, alpha, beta, gamma]]))
+            var_disc = np.concatenate((var_disc, [[dx, dy, dz, dalpha, dbeta, dgamma]]))
 
     return [traj_disc, var_disc]
 
@@ -85,8 +100,8 @@ def discretisation_trajectoire(trajectoire_souhaitee, pas_maximal):
     # Cette fonction renvoie une liste non pas des points par lesquels il faut passer (on n'en a pas besoin, mais si vous le souhaitez vous pouvez aussi renvoyer cette liste pour tracer des courbes), mais plutôt des déplacements infinitésimaux qu'il faut pour passer d'un point à un autre.
     # Chacun de ces déplacements infintésimaux est un np.array de 6 dimensions, 3 déplacements en position et 3 déplacements angulaires.
 
-#Test of discretisation_trajectoire
-#[trj, var] = discretisation_trajectoire(trajectoire_souhaitee, pas_maximal)
+# Test of discretisation_trajectoire
+# [trj, var] = discretisation_trajectoire(trajectoire_souhaitee, pas_maximal)
 
 
 ##################### Deuxième partie : Longueur des câbles ####################
@@ -103,40 +118,39 @@ def construction_rectangle(dimensions, centre):
     # Je pense qu'elle va effectivement vous permettre d'avoir un code plus simple à lire.
 
     # Cette fonction renvoie une liste de taille 8 des coordonnées des points du rectangle collé contre l'origine et orienté comme le hangar. Chaque coordonnée de coin du rectangle sera un np.array de dimension 3 (x, y et z)
-    lx=dimensions[0]
-    ly=dimensions[1]
-    lz=dimensions[2]
+    lx = dimensions[0]
+    ly = dimensions[1]
+    lz = dimensions[2]
 
-    if centre : #attention croisement  pas pris en compte
-        A6=np.array([-lx/2,-ly/2,-lz/2])
-        A7=np.array([-lx/2,-ly/2,lz/2])
-        A5=np.array([-lx/2,ly/2,lz/2])
-        A4=np.array([-lx/2,ly/2,-lz/2])
-        A0=np.array([lx/2,-ly/2,-lz/2])
-        A1=np.array([lx/2,-ly/2,lz/2])
-        A3=np.array([lx/2,ly/2,lz/2])
-        A2=np.array([lx/2,ly/2,-lz/2])
+    if centre: # attention, croisement pas pris en compte
+        A6 = np.array([-lx/2, -ly/2, -lz/2])
+        A7 = np.array([-lx/2, -ly/2, lz/2])
+        A5 = np.array([-lx/2, ly/2, lz/2])
+        A4 = np.array([-lx/2, ly/2, -lz/2])
+        A0 = np.array([lx/2, -ly/2, -lz/2])
+        A1 = np.array([lx/2, -ly/2, lz/2])
+        A3 = np.array([lx/2, ly/2, lz/2])
+        A2 = np.array([lx/2, ly/2, -lz/2])
 
-    else :
-        A6=np.array([0,0,0])
-        A7=np.array([0,0,lz])
-        A5=np.array([0,ly,lz])
-        A4=np.array([0,ly,0])
-        A0=np.array([lx,0,0])
-        A1=np.array([lx,0,lz])
-        A3=np.array([lx,ly,lz])
-        A2=np.array([lx,ly,0])
-    mobile= [A0,A1,A2,A3,A4,A5,A6,A7]
+    else:
+        A6 = np.array([0, 0, 0])
+        A7 = np.array([0, 0, lz])
+        A5 = np.array([0, ly, lz])
+        A4 = np.array([0, ly, 0])
+        A0 = np.array([lx, 0, 0])
+        A1 = np.array([lx, 0, lz])
+        A3 = np.array([lx, ly, lz])
+        A2 = np.array([lx, ly, 0])
+    mobile = [A0, A1, A2, A3, A4, A5, A6, A7]
     return mobile
-    pass
 
 
 def rotation(vecteur_rotation):
-    #vecteur_rotaion est un np_array de dimension 3 avec les 3 angles de rotation
+    # vecteur_rotaion est un np_array de dimension 3 avec les 3 angles de rotation
 
-    rho=vecteur_rotation[0]
-    theta=vecteur_rotation[1]
-    phi=vecteur_rotation[2]
+    rho = vecteur_rotation[0]
+    theta = vecteur_rotation[1]
+    phi = vecteur_rotation[2]
 
     # rho, theta et phi sont des déplacements angulaires du mobile autour des trois vecteurs de la base du hangar.
 
@@ -144,10 +158,10 @@ def rotation(vecteur_rotation):
     # Multiplier une vecteur par la matrice obtenue permettra de lui faire subir les trois rotations.
 
     # Cette fontion renvoie un np.array de dimensions 3*3 défini comme le produit des trois matrices de rotations données respectivement par les angles rho, theta, phi.
-    Rx = np.array([[1,0,0],[0,np.cos(rho),np.sin(rho)],[0, -np.sin(rho),np.cos(rho)]])
+    Rx = np.array([[1, 0, 0], [0, np.cos(rho), np.sin(rho)], [0, -np.sin(rho), np.cos(rho)]])
 
-    Ry = np.array([[np.cos(theta),0,-np.sin(theta)],[0,1,0],[np.sin(theta),0 ,np.cos(theta)]])
-    Rz = np.array([[np.cos(phi),np.sin(phi),0],[-np.sin(phi),np.cos(phi),0],[0,0,1]])
+    Ry = np.array([[np.cos(theta), 0, -np.sin(theta)], [0, 1, 0], [np.sin(theta), 0, np.cos(theta)]])
+    Rz = np.array([[np.cos(phi), np.sin(phi), 0], [-np.sin(phi), np.cos(phi), 0], [0, 0, 1]])
 
     rotationTotale = np.dot(np.dot(Rx, Ry), Rz)
 
@@ -165,29 +179,23 @@ def reconstruction_coins(position_mobile, dimensions_physiques_mobile):
 
     # Cette fonction renverra un liste de 8 éléments des positions des huits coins dans l'espace. La position d'un coin sera un np.array de dimension 3 (x, y et z)
 
-
-    #1
+    # 1
 
     mobile = construction_rectangle(dimensions_physiques_mobile, True)
-     #ici on fait coincidé le centre du mobile avec le centre du repère du hangar : cf schéma 3DExperience
+    # ici on fait coincidé le centre du mobile avec le centre du repère du hangar : cf schéma 3DExperience
 
-
-    #2
+    # 2
     orientation = position_mobile[3:6]
     rotation_mobile=rotation(orientation)
 
-    #3
+    # 3
     translationCentre = position_mobile[0:3]
 
-
     for indice in range(8):
-        mobile[indice]= np.dot(rotation_mobile, mobile[indice]) #2
-        mobile[indice]= mobile[indice]+ translationCentre #3
+        mobile[indice] = np.dot(rotation_mobile, mobile[indice])  # 2
+        mobile[indice] = mobile[indice] + translationCentre  # 3
 
     return mobile
-
-    pass
-
 
 
 def calcul_longueurs_cables(positions_coins_mobile, positions_coins_hangar):
@@ -198,14 +206,12 @@ def calcul_longueurs_cables(positions_coins_mobile, positions_coins_hangar):
 
     # Cette fonction renverra un np.array de 8 éléments, le ième élément correspondant à la longueur du ième câble.
 
-
-
     numerotationHangar = [i for i in range(8)]
-    numerotationCableBoite= [6,7,4,5,2,3,0,1] # on est pour le mobile on a donc numéroté les coins du hangar et les cables qui y sont associés (eg : le coinMobile en face du coinHangar6 est 0)
-    longueurCable=np.zeros(8)
+    numerotationCableBoite = [6, 7, 4, 5, 2, 3, 0, 1]  # on est pour le mobile on a donc numéroté les coins du hangar et les cables qui y sont associés (eg : le coinMobile en face du coinHangar6 est 0)
+    longueurCable = np.zeros(8)
 
-    for i in range(8) :
-        vecteurCoins= positions_coins_mobile[numerotationCableBoite[i]] - positions_coins_hangar[i]
+    for i in range(8):
+        vecteurCoins = positions_coins_mobile[numerotationCableBoite[i]] - positions_coins_hangar[i]
         longueurCable[i] = np.linalg.norm(vecteurCoins)
     return longueurCable
     pass
@@ -219,7 +225,6 @@ def commande_longeurs_cables(trajectoire_discretisee, dimensions_physiques_mobil
     # Cette fonction va prendre en argument la trajectoire discrétisée, i.e. la liste des déplacements infintésimaux qu'il faut réaliser pour parcourir la trajectoire souhaitée, et va la convertir en une liste de modifications infintésimales des longueurs de corde.
     # Pour cela, on doit garder en mémoire (dans des variables locales) la position actuelle du module (np.array de 6 dimensions, 3 positions + 3 angles) ainsi que les longueurs actuelles des cordes (un np.array de dimension 8).
 
-
     # Pour chaque déplacement infintésimal dans cette boucle on devra :
     # - 1 : Mettre à jour la position mémorisée du mobile (selon les 6 dimensions).
     # - 2 : Reconstruire les coins du mobile (en prenant en compte l'orientation avec reconstruction_coins).
@@ -228,78 +233,73 @@ def commande_longeurs_cables(trajectoire_discretisee, dimensions_physiques_mobil
     # - 5 : Mettre à jour les longueurs des cordes.
 
     # Cette fonction renverra un liste des modifications de longueurs des cordes, chaque élément de la liste étant un np.array de dimension 8 dont le ième élément est la variation de longueur de la ième corde.
-    coinsHangar =construction_rectangle(dimensions_physiques_hangar, False)
+    coinsHangar = construction_rectangle(dimensions_physiques_hangar, False)
 
-    nombreIteration = len (trajectoire_discretisee[1])
-    positionInitiale = trajectoire_discretisee[0][0] ###ATTENTION JE NE SAIS PAS SI CA FONCTIONNE ET C'EST UN DETAIL IMPORTANT
+    nombreIteration = len(trajectoire_discretisee[1])
+    positionInitiale = trajectoire_discretisee[0][0]  ### ATTENTION JE NE SAIS PAS SI CA FONCTIONNE ET C'EST UN DETAIL IMPORTANT
     coinsPositionInit = reconstruction_coins(positionInitiale, dimensions_physiques_mobile)
 
-    longueursCableInit= calcul_longueurs_cables(coinsPositionInit, coinsHangar)
-    tableauVarLongueur=[]
-    tableauLongueur=[]
-    for n in range(1,nombreIteration):
-
+    longueursCableInit = calcul_longueurs_cables(coinsPositionInit, coinsHangar)
+    tableauVarLongueur = []
+    tableauLongueur = []
+    for n in range(1, nombreIteration):
 
         nouvellePosition = positionInitiale + trajectoire_discretisee[1][n]
         coinsNouvellePosition = reconstruction_coins(nouvellePosition, dimensions_physiques_mobile)
         nouvellesLongueursCables = calcul_longueurs_cables(coinsNouvellePosition, coinsHangar)
-        variationLongueur=nouvellesLongueursCables-longueursCableInit
-        tableauVarLongueur+=[variationLongueur]
-        tableauLongueur+=[nouvellesLongueursCables]
-        longueursCableInit=nouvellesLongueursCables
-        positionInitiale=nouvellePosition
+        variationLongueur = nouvellesLongueursCables-longueursCableInit
+        tableauVarLongueur += [variationLongueur]
+        tableauLongueur += [nouvellesLongueursCables]
+        longueursCableInit = nouvellesLongueursCables
+        positionInitiale = nouvellePosition
+
+    return [tableauVarLongueur, tableauLongueur]  # on retourne une liste des variations de longueur des cables
 
 
-    return [tableauVarLongueur,tableauLongueur] #on retourne une liste des variations de longueur des cables
-    pass
+# Definir la trajectoire_souhaitee
+origine = np.array([0, 0, 0, 0, 0, 0])
+destination = np.array([0.5, 0.5, 0.5, 0, 0, 0])
 
-
-
-#Definir la trajectoire_souhaitee
-origine = np.array([0,0,0,0,0,0])
-destination = np.array([0.5,0.5,0.5,0,0,0])
-
-trajectoire_souhaitee = np.array([origine], dtype = float)
+trajectoire_souhaitee = np.array([origine], dtype=float)
 trajectoire_souhaitee = np.insert(trajectoire_souhaitee, 1, destination, 0)
-centre = np.array([0,0,0,0,0,0])
-dimension=np.array([0.25,0.25,0.3])
-coinsMobile= (reconstruction_coins(centre,dimension))
+centre = np.array([0, 0, 0, 0, 0, 0])
+dimension = np.array([0.25, 0.25, 0.3])
+coinsMobile = (reconstruction_coins(centre, dimension))
 
 
-dimensionHangar = np.array([1.25,1.25,1])
+dimensionHangar = np.array([1.25, 1.25, 1])
 coinsHangar = construction_rectangle(dimensionHangar, False)
-print(calcul_longueurs_cables(coinsMobile,coinsHangar))
+print(calcul_longueurs_cables(coinsMobile, coinsHangar))
 
-varlongueurCable=commande_longeurs_cables(discretisation_trajectoire(trajectoire_souhaitee, pas_maximal), dimension, dimensionHangar)[0]
-longueurCable=commande_longeurs_cables(discretisation_trajectoire(trajectoire_souhaitee, pas_maximal), dimension, dimensionHangar)[1]
+varlongueurCable = commande_longeurs_cables(discretisation_trajectoire(trajectoire_souhaitee, pas_maximal), dimension, dimensionHangar)[0]
+longueurCable = commande_longeurs_cables(discretisation_trajectoire(trajectoire_souhaitee, pas_maximal), dimension, dimensionHangar)[1]
 
 
-var0=[]
-var1=[]
-var2=[]
-var3=[]
-var4=[]
-var5=[]
-var6=[]
-var7=[]
+var0 = []
+var1 = []
+var2 = []
+var3 = []
+var4 = []
+var5 = []
+var6 = []
+var7 = []
 
-n= len(varlongueurCable)
-print(var[0])
+n = len(varlongueurCable)
 print(n)
 
 for i in range(n):
-    var0=var0+[varlongueurCable[i][0]]
-    var1=var1+[varlongueurCable[i][1]]
-    var2=var2+[varlongueurCable[i][2]]
-    var3=var3+[varlongueurCable[i][3]]
-    var4=var4+[varlongueurCable[i][4]]
-    var5=var5+[varlongueurCable[i][5]]
-    var6=var6+[varlongueurCable[i][6]]
-    var7=var7+[varlongueurCable[i][7]]
+    var0.append(varlongueurCable[i][0])
+    var1.append(varlongueurCable[i][1])
+    var2.append(varlongueurCable[i][2])
+    var3.append(varlongueurCable[i][3])
+    var4.append(varlongueurCable[i][4])
+    var5.append(varlongueurCable[i][5])
+    var6.append(varlongueurCable[i][6])
+    var7.append(varlongueurCable[i][7])
 
-subplot(1,2,1)
+subplot(1, 2, 1)
 
-x=list(range(n))
+x = list(range(n))
 plot(x, var0, label='Cable 0')
 plot(x, var1, label='Cable 1')
 plot(x, var2, label='Cable 2')
@@ -310,26 +310,26 @@ plot(x, var6, label='Cable 6')
 plot(x, var7, label='Cable 7')
 legend()
 
-long0=[]
-long1=[]
-long2=[]
-long3=[]
-long4=[]
-long5=[]
-long6=[]
-long7=[]
+long0 = []
+long1 = []
+long2 = []
+long3 = []
+long4 = []
+long5 = []
+long6 = []
+long7 = []
 
 for i in range(n):
-    long0=long0+[longueurCable[i][0]]
-    long1=long1+[longueurCable[i][1]]
-    long2=long2+[longueurCable[i][2]]
-    long3=long3+[longueurCable[i][3]]
-    long4=long4+[longueurCable[i][4]]
-    long5=long5+[longueurCable[i][5]]
-    long6=long6+[longueurCable[i][6]]
-    long7=long7+[longueurCable[i][7]]
+    long0.append(longueurCable[i][0])
+    long1.append(longueurCable[i][1])
+    long2.append(longueurCable[i][2])
+    long3.append(longueurCable[i][3])
+    long4.append(longueurCable[i][4])
+    long5.append(longueurCable[i][5])
+    long6.append(longueurCable[i][6])
+    long7.append(longueurCable[i][7])
 
-subplot(1,2,2)
+subplot(1, 2, 2)
 
 plot(x, long0, label='Cable 0')
 plot(x, long1, label='Cable 1')
@@ -340,7 +340,10 @@ plot(x, long5, label='Cable 5')
 plot(x, long6, label='Cable 6')
 plot(x, long7, label='Cable 7')
 show()
+
+
 ######################## Troisième partie : Commande du robot ##################
+
 
 def commande(trajectoire_souhaitee, pas_maximal, dimensions_physiques_mobile, dimensions_physiques_hangar):
     # Les définitions de tous les arguments sont données respectivement dans discretisation_trajectoire, calcul_pas_adapte, reconstruction_coins, commande_longeurs_cables
@@ -353,23 +356,20 @@ def commande(trajectoire_souhaitee, pas_maximal, dimensions_physiques_mobile, di
     # - 3 : On traduit ces variations de longueur des câbles en commande de rotation angulaire des moteurs.
 
     # Cette fonction renvoie une liste des commandes des moteurs. Chaque commande moteur sera à son tour un np.array de dimension 8 dont le ième élément sera la commande destinée au ième moteur.
-    diametreTambour=0.009
-    trajectoireDiscretise=discretisation_trajectoire(trajectoire_souhaitee, pas_maximal)[1]
-    longueurCable=commande_longeurs_cables(trajectoireDiscretisee, dimensions_physiques_mobile, dimensions_physiques_hangar)
-    nombrePosition=len(longueurCable)
-    rotationMoteur=[]
+    diametreTambour = 0.009
+    trajectoireDiscretise = discretisation_trajectoire(trajectoire_souhaitee, pas_maximal)[1]
+    longueurCable = commande_longeurs_cables(trajectoireDiscretisee, dimensions_physiques_mobile, dimensions_physiques_hangar)
+    nombrePosition = len(longueurCable)
+    rotationMoteur = []
     for i in range(nombrePosition):
-        rotation=np.arctan(longueurCable[i]/diametreTambour)
-        rotationMoteur+=[rotation]
+        rotation = np.arctan(longueurCable[i]/diametreTambour)
+        rotationMoteur += [rotation]
 
     return rotation
 
 
-    pass
-
-
-origine = np.array([0.,0.,0.,0.,0.,0.])
-destination = np.array([0.5,0.,0.,0,0,0])
+origine = np.array([0., 0., 0., 0., 0., 0.])
+destination = np.array([0.5, 0., 0., 0, 0, 0])
 n = calcul_pas_adapte(origine, destination, pas_maximal)
 
 
@@ -379,9 +379,9 @@ n = calcul_pas_adapte(origine, destination, pas_maximal)
 
 
 def initialisationRotation(numeroMoteur, bouton):
-    #cette fonction prend en argument le numéro du moteur qui est un entier et un bouton qui est fait un True/False
-    diametreTambour=0.009
+    # cette fonction prend en argument le numéro du moteur qui est un entier et un bouton qui est fait un True/False
+    diametreTambour = 0.009
     rotationMoteur = [0 for k in range(8)]
-    if bouton :
-        rotationMoteur=arctan(0.01/diametreTambour)
+    if bouton:
+        rotationMoteur = arctan(0.01/diametreTambour)
     return rotationMoteur
