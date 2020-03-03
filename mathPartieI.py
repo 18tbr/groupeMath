@@ -1,4 +1,4 @@
-# Ce squelette de code n'est qu'une proposition de structure pour votre code de commande du robot, si vous vouhaitez vous en écarter ou l'améliorer sentez vous libre.
+# coding: utf8
 
 # On suppose que l'on a une série de points en entrée, on s'occupera de ce détail plus tard.
 # On considère le pas de temps comme imposé dans la cadre arduino
@@ -9,99 +9,113 @@ from pylab import *
 
 ############### Première partie : Discrétisation de la trajectoire ############
 
-# longeur en m
+# 3 longeurs en m
 pas_translation_x = 0.01
 pas_translation_y = 0.01
 pas_translation_z = 0.01
-# angle en radian
+# 3 angles en radian
 pas_rotation_alpha = 3.14/180
 pas_rotation_beta = 3.14/180
 pas_rotation_gamma = 3.14/180
-# vecteur
+# vecteur des pas maximaux que l'on s'autorise
 pas_maximal = np.array([pas_translation_x, pas_translation_y,
                         pas_translation_z, pas_rotation_alpha,
                         pas_rotation_beta, pas_rotation_gamma])
 
 
-def calcul_pas_adapte(array, pas_maximal):
+def calcul_pas_adapte(trajectoire, pas_maximal):
     """
-    Donne le nombre de pas à effectuer pour une étape dans la trajectoire
+    Donne le nombre de pas à effectuer pour chaque dimension pour une étape
+    dans la trajectoire.
 
-    :param array: Trajectoire
-    :param pas_maximal: vecteur des pas
-    :type array: np.array
+    Pour calculer le pas adapté, on calcule le nombre de pas minimal que l'on
+    devra faire pour aller de la source à la destination (la dimension dont le
+    pas est le plus petit dicte le nombre de pas).
+
+    :param trajectoire: Trajectoire souhaitée
+    :param pas_maximal: vecteur de taille 6 des pas maximaux
+
+    :type trajectoire: np.array
     :type pas_maximal: np.array de taille 6
+
+    :return: Vecteur de taille 9 des pas pour chaque intervalle
+    :rtype: np.array
     """
-    length = array.shape[0] - 1
-    nombre_pas_max = np.zeros(length)
 
-    for j in range(length):
-        diff = np.zeros(6)
-        nombre_pas = np.zeros(6)
+    nb_intervalles = len(trajectoire) - 1
+    nombre_pas = np.zeros(nb_intervalles, dtype=int)
+
+    for j in range(nb_intervalles):
+        nombre_pas_detail = np.zeros(6)
         for i in range(6):
-            diff[i] = abs(array[j + 1][i] - array[j][i])
-            nombre_pas[i] = diff[i] / pas_maximal[i]
-        nombre_pas_max[j] = np.amax(nombre_pas)
-        nombre_pas_max[j] = ceil(nombre_pas_max[j])
-
-    return nombre_pas_max
-
-    # origine est un vecteur à 6 dimensions (3 positions et 3 angles), idem pour la destination. Leur type est np.array.
-    # Notez que pas maximal est aussi un vecteur à 6 dimensions, qui contient le maximal que l'on s'autorise dans chaque dimension.
-
-    # Pour calculer le pas adapté vous pouvez réutiliser ce que vous avez écrit, à savoir :
-    # - 1 : On calcule le nombre de pas minimal que l'on devra faire pour aller de la source à la destination (attention, il faut atteindre la destination selon toutes les dimensions, donc c'est la dernière dimension atteinte qui dicte le nombre de pas);
-    # - 2 : On calcul le pas dont on a besoin pour aller de l'origine à la destination en faisant le nombre minimal de pas trouvé précédement mais en s'asurant que ces pas soient de longueur constante.
-
-    # On renvoie enfin le nombre de pas à faire (un entier) et la longueur de ces pas (un flottant).
+            nombre_pas_detail[i] = abs(trajectoire[j+1][i] -
+                                       trajectoire[j][i]) / pas_maximal[i]
+        nombre_pas[j] = math.ceil(np.amax(nombre_pas_detail))
+    return nombre_pas
 
 
-# Test of calcul_pas_adapte
-array = np.random.rand(10, 6)
-trajectoire_souhaitee = array
-# n = calcul_pas_adapte(trajectoire_souhaitee, pas_maximal)
+trajectoire = np.random.rand(10, 6)
+# print("Trajectoire :\n", trajectoire)
+# print(calcul_pas_adapte(trajectoire, pas_maximal))
 
 
-def discretisation_trajectoire(trajectoire_souhaitee, pas_maximal):
-    length = trajectoire_souhaitee.shape[0] - 1
-    nombre_pas_max = calcul_pas_adapte(trajectoire_souhaitee, pas_maximal)
+def discretisation_trajectoire(trajectoire, pas_maximal):
+    """
+    Discrétise la trajectoire souhaitée en divisant les parties trop grandes en
+    pas de longueurs constantes par morceaux plus petits que pas_maximal
 
-    # Initialisation of the output arrays
+    Cette fonction renvoie une liste non pas des points par lesquels il faut passer
+    (on n'en a pas besoin, mais si vous le souhaitez vous pouvez aussi renvoyer
+    cette liste pour tracer des courbes), mais plutôt des déplacements infinitésimaux
+    qu'il faut pour passer d'un point à un autre.
+    Chacun de ces déplacements infintésimaux est un np.array de 6 dimensions,
+    3 déplacements en position et 3 déplacements angulaires.
+
+    :param trajectoire: Trajectoire souhaitée
+    :param pas_maximal: vecteur de taille 6 des pas maximaux
+
+    :type trajectoire: np.array
+    :type pas_maximal: np.array de taille 6
+
+    :return:
+    :rtype:
+    """
+
+    nb_intervalles = len(trajectoire) - 1
+    nombre_pas = calcul_pas_adapte(trajectoire, pas_maximal)
+
     traj_disc = np.array([[0., 0., 0., 0., 0., 0.]])
     var_disc = np.array([[0., 0., 0., 0., 0., 0.]])
 
-    for j in range(length):
+    for j in range(nb_intervalles):
+        nb_pas_j = nombre_pas[j]
 
-        dx = (trajectoire_souhaitee[j+1][0] - trajectoire_souhaitee[j][0])/nombre_pas_max[j]
-        dy = (trajectoire_souhaitee[j+1][1] - trajectoire_souhaitee[j][1])/nombre_pas_max[j]
-        dz = (trajectoire_souhaitee[j+1][2] - trajectoire_souhaitee[j][2])/nombre_pas_max[j]
-        dalpha = (trajectoire_souhaitee[j+1][3] - trajectoire_souhaitee[j][3])/nombre_pas_max[j]
-        dbeta = (trajectoire_souhaitee[j+1][4] - trajectoire_souhaitee[j][4])/nombre_pas_max[j]
-        dgamma = (trajectoire_souhaitee[j+1][5] - trajectoire_souhaitee[j][5])/nombre_pas_max[j]
+        dx = (trajectoire[j+1][0] - trajectoire[j][0]) / nb_pas_j
+        dy = (trajectoire[j+1][1] - trajectoire[j][1]) / nb_pas_j
+        dz = (trajectoire[j+1][2] - trajectoire[j][2]) / nb_pas_j
+        dalpha = (trajectoire[j+1][3] - trajectoire[j][3]) / nb_pas_j
+        dbeta = (trajectoire[j+1][4] - trajectoire[j][4]) / nb_pas_j
+        dgamma = (trajectoire[j+1][5] - trajectoire[j][5]) / nb_pas_j
 
-        for i in range(0, math.ceil(nombre_pas_max[j])):
-            x = trajectoire_souhaitee[j][0] + i * dx
-            y = trajectoire_souhaitee[j][1] + i * dy
-            z = trajectoire_souhaitee[j][2] + i * dz
-            alpha = trajectoire_souhaitee[j][3] + i * dalpha
-            beta = trajectoire_souhaitee[j][4] + i * dbeta
-            gamma = trajectoire_souhaitee[j][5] + i * dgamma
+        for i in range(0, nb_pas_j):
+            x = trajectoire[j][0] + i * dx
+            y = trajectoire[j][1] + i * dy
+            z = trajectoire[j][2] + i * dz
+            alpha = trajectoire[j][3] + i * dalpha
+            beta = trajectoire[j][4] + i * dbeta
+            gamma = trajectoire[j][5] + i * dgamma
 
             traj_disc = np.concatenate((traj_disc, [[x, y, z, alpha, beta, gamma]]))
             var_disc = np.concatenate((var_disc, [[dx, dy, dz, dalpha, dbeta, dgamma]]))
 
+    print("Traj disc", traj_disc)
+    print(traj_disc.shape)
     return [traj_disc, var_disc]
 
-    # On passe en passe en argument la trajectoire souhaitée, qui est une liste de tableaux numpy, chaque tableau numpy ayant 6 dimensions, 3 positions + 3 angles.
-    # pas_maximal est défini comme dans calcul_pas_adapte
-
-    # Cette fonction discrétise la trajectoire souhaitée en divisant les parties trop grandes en pas de longueurs constantes par morceaux toujours plus petits que pas_maximal
-
-    # Cette fonction renvoie une liste non pas des points par lesquels il faut passer (on n'en a pas besoin, mais si vous le souhaitez vous pouvez aussi renvoyer cette liste pour tracer des courbes), mais plutôt des déplacements infinitésimaux qu'il faut pour passer d'un point à un autre.
-    # Chacun de ces déplacements infintésimaux est un np.array de 6 dimensions, 3 déplacements en position et 3 déplacements angulaires.
-
 # Test of discretisation_trajectoire
-# [trj, var] = discretisation_trajectoire(trajectoire_souhaitee, pas_maximal)
+# [trj, var] = discretisation_trajectoire(trajectoire, pas_maximal)
+
+discretisation_trajectoire(trajectoire, pas_maximal)
 
 
 ##################### Deuxième partie : Longueur des câbles ####################
@@ -169,6 +183,10 @@ def rotation(vecteur_rotation):
 
 
 def reconstruction_coins(position_mobile, dimensions_physiques_mobile):
+    # juste passer mobile en argument
+    # on appelle ça a chaque fois qu'on change les coordonnees
+
+
     # L'argument position_mobile est un np.array à 6 dimensions, 3 positions + 3 angles, représentant la position actuelle du centre du mobile et son orientation.
     # dimensions_physiques_mobile est un np.array de 3 dimensions représentant longeur, largeur et hauteur du mobile.
 
@@ -214,7 +232,6 @@ def calcul_longueurs_cables(positions_coins_mobile, positions_coins_hangar):
         vecteurCoins = positions_coins_mobile[numerotationCableBoite[i]] - positions_coins_hangar[i]
         longueurCable[i] = np.linalg.norm(vecteurCoins)
     return longueurCable
-    pass
 
 
 def commande_longeurs_cables(trajectoire_discretisee, dimensions_physiques_mobile, dimensions_physiques_hangar):
@@ -235,13 +252,13 @@ def commande_longeurs_cables(trajectoire_discretisee, dimensions_physiques_mobil
     # Cette fonction renverra un liste des modifications de longueurs des cordes, chaque élément de la liste étant un np.array de dimension 8 dont le ième élément est la variation de longueur de la ième corde.
     coinsHangar = construction_rectangle(dimensions_physiques_hangar, False)
 
-    nombreIteration = len(trajectoire_discretisee[1])
+    nombreIteration = len(trajectoire_discretisee[1]) ## obj nombre de pas total
     positionInitiale = trajectoire_discretisee[0][0]  ### ATTENTION JE NE SAIS PAS SI CA FONCTIONNE ET C'EST UN DETAIL IMPORTANT
     coinsPositionInit = reconstruction_coins(positionInitiale, dimensions_physiques_mobile)
 
     longueursCableInit = calcul_longueurs_cables(coinsPositionInit, coinsHangar)
     tableauVarLongueur = []
-    tableauLongueur = []
+    tableauLongueur = [] ##test
     for n in range(1, nombreIteration):
 
         nouvellePosition = positionInitiale + trajectoire_discretisee[1][n]
@@ -249,19 +266,21 @@ def commande_longeurs_cables(trajectoire_discretisee, dimensions_physiques_mobil
         nouvellesLongueursCables = calcul_longueurs_cables(coinsNouvellePosition, coinsHangar)
         variationLongueur = nouvellesLongueursCables-longueursCableInit
         tableauVarLongueur += [variationLongueur]
-        tableauLongueur += [nouvellesLongueursCables]
+        tableauLongueur += [nouvellesLongueursCables] ##test
         longueursCableInit = nouvellesLongueursCables
         positionInitiale = nouvellePosition
 
     return [tableauVarLongueur, tableauLongueur]  # on retourne une liste des variations de longueur des cables
 
 
-# Definir la trajectoire_souhaitee
+# Definir la trajectoire
 origine = np.array([0, 0, 0, 0, 0, 0])
 destination = np.array([0.5, 0.5, 0.5, 0, 0, 0])
 
-trajectoire_souhaitee = np.array([origine], dtype=float)
-trajectoire_souhaitee = np.insert(trajectoire_souhaitee, 1, destination, 0)
+# trajectoire = np.array([origine], dtype=float)
+# trajectoire = np.insert(trajectoire, 1, destination, 0)
+trajectoire = np.random.rand(10, 6)
+
 centre = np.array([0, 0, 0, 0, 0, 0])
 dimension = np.array([0.25, 0.25, 0.3])
 coinsMobile = (reconstruction_coins(centre, dimension))
@@ -271,8 +290,8 @@ dimensionHangar = np.array([1.25, 1.25, 1])
 coinsHangar = construction_rectangle(dimensionHangar, False)
 print(calcul_longueurs_cables(coinsMobile, coinsHangar))
 
-varlongueurCable = commande_longeurs_cables(discretisation_trajectoire(trajectoire_souhaitee, pas_maximal), dimension, dimensionHangar)[0]
-longueurCable = commande_longeurs_cables(discretisation_trajectoire(trajectoire_souhaitee, pas_maximal), dimension, dimensionHangar)[1]
+varlongueurCable = commande_longeurs_cables(discretisation_trajectoire(trajectoire, pas_maximal), dimension, dimensionHangar)[0]
+longueurCable = commande_longeurs_cables(discretisation_trajectoire(trajectoire, pas_maximal), dimension, dimensionHangar)[1]
 
 
 var0 = []
@@ -345,7 +364,7 @@ show()
 ######################## Troisième partie : Commande du robot ##################
 
 
-def commande(trajectoire_souhaitee, pas_maximal, dimensions_physiques_mobile, dimensions_physiques_hangar):
+def commande(trajectoire, pas_maximal, dimensions_physiques_mobile, dimensions_physiques_hangar):
     # Les définitions de tous les arguments sont données respectivement dans discretisation_trajectoire, calcul_pas_adapte, reconstruction_coins, commande_longeurs_cables
 
     # Cette fonction est la fonction de haut niveau dont on se servira pour commander la maquette.
@@ -357,7 +376,7 @@ def commande(trajectoire_souhaitee, pas_maximal, dimensions_physiques_mobile, di
 
     # Cette fonction renvoie une liste des commandes des moteurs. Chaque commande moteur sera à son tour un np.array de dimension 8 dont le ième élément sera la commande destinée au ième moteur.
     diametreTambour = 0.009
-    trajectoireDiscretise = discretisation_trajectoire(trajectoire_souhaitee, pas_maximal)[1]
+    trajectoireDiscretise = discretisation_trajectoire(trajectoire, pas_maximal)[1]
     longueurCable = commande_longeurs_cables(trajectoireDiscretisee, dimensions_physiques_mobile, dimensions_physiques_hangar)
     nombrePosition = len(longueurCable)
     rotationMoteur = []
