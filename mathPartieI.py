@@ -18,14 +18,19 @@ pas_rotation_beta = 3.14/180
 pas_rotation_gama = 3.14/180
 pas_maximal = np.array([pas_translation_x, pas_translation_y, pas_translation_z, pas_rotation_alpha, pas_rotation_beta, pas_rotation_gama])
 
+def calcul_pas_adapte(array, pas_maximal):
+    length = array.shape[0] - 1
+    nombre_pas_max = np.zeros(length)
 
-def calcul_pas_adapte(origine, destination, pas_maximal):
-    diff = np.zeros(6)
-    nombre_pas = np.zeros(6)
-    for i in range(6):
-        diff[i] = destination[i] - origine[i]
-        nombre_pas[i] = diff[i] / pas_maximal[i]
-    nombre_pas_max = np.amax(nombre_pas)
+    for j in range(length):
+        diff = np.zeros(6)
+        nombre_pas = np.zeros(6)
+        for i in range(6):
+            diff[i] = abs(array[j + 1][i] - array[j][i])
+            nombre_pas[i] = diff[i] / pas_maximal[i]
+        nombre_pas_max[j] = np.amax(nombre_pas)
+        nombre_pas_max[j] = ceil( nombre_pas_max[j] )
+
     return nombre_pas_max
 
     # origine est un vecteur à 6 dimensions (3 positions et 3 angles), idem pour la destination. Leur type est np.array.
@@ -37,42 +42,40 @@ def calcul_pas_adapte(origine, destination, pas_maximal):
 
     # On renvoie enfin le nombre de pas à faire (un entier) et la longueur de ces pas (un flottant).
 
-#Test
-
-
-
-
+#Test of calcul_pas_adapte
+array = np.random.rand(10, 6)
+trajectoire_souhaitee = array
+#n = calcul_pas_adapte(trajectoire_souhaitee, pas_maximal)
 
 def discretisation_trajectoire(trajectoire_souhaitee, pas_maximal):
+    length = trajectoire_souhaitee.shape[0] - 1
+    nombre_pas_max = calcul_pas_adapte(trajectoire_souhaitee, pas_maximal)
 
-    nombre_pas = calcul_pas_adapte(trajectoire_souhaitee[0], trajectoire_souhaitee[1], pas_maximal)
+    #Initialisation of the output arrays
+    traj_disc = np.array([[0.,0.,0.,0.,0.,0.]])
+    var_disc = np.array([[0.,0.,0.,0.,0.,0.]])
 
-    variation = np.array([[0.,0.,0.,0.,0.,0.]])
+    for j in range(length):
 
-    dx = (trajectoire_souhaitee[1][0] - trajectoire_souhaitee[0][0])/nombre_pas
-    dy = (trajectoire_souhaitee[1][1] - trajectoire_souhaitee[0][1])/nombre_pas
-    dz = (trajectoire_souhaitee[1][2] - trajectoire_souhaitee[0][2])/nombre_pas
-    dalpha = (trajectoire_souhaitee[1][3] - trajectoire_souhaitee[0][3])/nombre_pas
-    dbeta = (trajectoire_souhaitee[1][4] - trajectoire_souhaitee[0][4])/nombre_pas
-    dgama = (trajectoire_souhaitee[1][5] - trajectoire_souhaitee[0][5])/nombre_pas
+        dx = (trajectoire_souhaitee[j+1][0] - trajectoire_souhaitee[j][0])/nombre_pas_max[j]
+        dy = (trajectoire_souhaitee[j+1][1] - trajectoire_souhaitee[j][1])/nombre_pas_max[j]
+        dz = (trajectoire_souhaitee[j+1][2] - trajectoire_souhaitee[j][2])/nombre_pas_max[j]
+        dalpha = (trajectoire_souhaitee[j+1][3] - trajectoire_souhaitee[j][3])/nombre_pas_max[j]
+        dbeta = (trajectoire_souhaitee[j+1][4] - trajectoire_souhaitee[j][4])/nombre_pas_max[j]
+        dgama = (trajectoire_souhaitee[j+1][5] - trajectoire_souhaitee[j][5])/nombre_pas_max[j]
 
-    for i in range (1, math.ceil(nombre_pas)):
+        for i in range (0, math.ceil(nombre_pas_max[j])):
+            x = trajectoire_souhaitee[j][0] + i * dx
+            y = trajectoire_souhaitee[j][1] + i * dy
+            z = trajectoire_souhaitee[j][2] + i * dz
+            alpha = trajectoire_souhaitee[j][3] + i * dalpha
+            beta = trajectoire_souhaitee[j][4] + i * dbeta
+            gama = trajectoire_souhaitee[j][5] + i * dgama
 
-        x = trajectoire_souhaitee[0][0] + i * dx
-        y = trajectoire_souhaitee[0][1] + i * dy
-        z = trajectoire_souhaitee[0][2] + i * dz
-        alpha = trajectoire_souhaitee[0][3] + i * dalpha
-        beta = trajectoire_souhaitee[0][4] + i * dbeta
-        gama = trajectoire_souhaitee[0][5] + i * dgama
+            traj_disc = np.concatenate((traj_disc,[[x,y,z,alpha,beta,gama]]))
+            var_disc = np.concatenate((var_disc,[[dx,dy,dz,dalpha,dbeta,dgama]]))
 
-        trajectoire_souhaitee = np.insert(trajectoire_souhaitee, i, [x,y,z,alpha,beta,gama], 0)
-
-        variation = np.insert(variation, i-1, [dx,dy,dz,dalpha,dbeta,dgama], 0)
-
-    m = variation.shape[0] - 1
-    variation = np.insert(variation, m, [dx,dy,dz,dalpha,dbeta,dgama], 0)
-
-    return [trajectoire_souhaitee, variation]
+    return [traj_disc, var_disc]
 
     # On passe en passe en argument la trajectoire souhaitée, qui est une liste de tableaux numpy, chaque tableau numpy ayant 6 dimensions, 3 positions + 3 angles.
     # pas_maximal est défini comme dans calcul_pas_adapte
@@ -82,8 +85,8 @@ def discretisation_trajectoire(trajectoire_souhaitee, pas_maximal):
     # Cette fonction renvoie une liste non pas des points par lesquels il faut passer (on n'en a pas besoin, mais si vous le souhaitez vous pouvez aussi renvoyer cette liste pour tracer des courbes), mais plutôt des déplacements infinitésimaux qu'il faut pour passer d'un point à un autre.
     # Chacun de ces déplacements infintésimaux est un np.array de 6 dimensions, 3 déplacements en position et 3 déplacements angulaires.
 
-#Test
-[trj, var] = discretisation_trajectoire(trajectoire_souhaitee, pas_maximal)
+#Test of discretisation_trajectoire
+#[trj, var] = discretisation_trajectoire(trajectoire_souhaitee, pas_maximal)
 
 
 ##################### Deuxième partie : Longueur des câbles ####################
@@ -151,8 +154,6 @@ def rotation(vecteur_rotation):
     return rotationTotale
 
 
-    pass
-
 def reconstruction_coins(position_mobile, dimensions_physiques_mobile):
     # L'argument position_mobile est un np.array à 6 dimensions, 3 positions + 3 angles, représentant la position actuelle du centre du mobile et son orientation.
     # dimensions_physiques_mobile est un np.array de 3 dimensions représentant longeur, largeur et hauteur du mobile.
@@ -208,10 +209,6 @@ def calcul_longueurs_cables(positions_coins_mobile, positions_coins_hangar):
         longueurCable[i] = np.linalg.norm(vecteurCoins)
     return longueurCable
     pass
-
-
-
-
 
 
 def commande_longeurs_cables(trajectoire_discretisee, dimensions_physiques_mobile, dimensions_physiques_hangar):
@@ -381,9 +378,7 @@ n = calcul_pas_adapte(origine, destination, pas_maximal)
 # L'objectif de cette partie est de faire l'initialisation visuelle de la maquette pour cela on aura un bouton et un numéro du moteur on pourra donc faire tourner manuellement le moteur
 
 
-
-
-def initialisationRotation(numeroMoteur, bouton) :
+def initialisationRotation(numeroMoteur, bouton):
     #cette fonction prend en argument le numéro du moteur qui est un entier et un bouton qui est fait un True/False
     diametreTambour=0.009
     rotationMoteur = [0 for k in range(8)]
