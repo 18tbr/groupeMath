@@ -1,6 +1,7 @@
 # coding: utf8
 
-# On suppose que l'on a une série de points en entrée, on s'occupera de ce détail plus tard.
+# On suppose que l'on a une série de points en entrée, on s'occupera
+# de ce détail plus tard.
 # On considère le pas de temps comme imposé dans la cadre arduino
 
 import numpy as np
@@ -62,14 +63,13 @@ trajectoire = np.random.rand(10, 6)
 def discretisation_trajectoire(trajectoire, pas_maximal):
     """
     Discrétise la trajectoire souhaitée en divisant les parties trop grandes en
-    pas de longueurs constantes par morceaux plus petits que pas_maximal
-
-    Cette fonction renvoie une liste non pas des points par lesquels il faut passer
-    (on n'en a pas besoin, mais si vous le souhaitez vous pouvez aussi renvoyer
-    cette liste pour tracer des courbes), mais plutôt des déplacements infinitésimaux
-    qu'il faut pour passer d'un point à un autre.
-    Chacun de ces déplacements infintésimaux est un np.array de 6 dimensions,
-    3 déplacements en position et 3 déplacements angulaires.
+    pas de longueurs constantes par morceaux plus petits que pas_maximal.
+    Renvoie 2 listes :
+    1. la liste des points par lesquels il faut passer, inutile pour les
+    moteurs mais utile pour tracer les courbes de trajectoire ;
+    2. la liste des déplacements infinitésimaux qu'il faut pour passer d'un
+    point à un autre. Chacun de ces déplacements infintésimaux est un np.arra
+    de 6 dimensions, 3 en position et 3 angulaires.
 
     :param trajectoire: Trajectoire souhaitée
     :param pas_maximal: vecteur de taille 6 des pas maximaux
@@ -77,15 +77,17 @@ def discretisation_trajectoire(trajectoire, pas_maximal):
     :type trajectoire: np.array
     :type pas_maximal: np.array de taille 6
 
-    :return:
-    :rtype:
+    :return: Couple d'arrays
+    :rtype: (np.array, np.array)
     """
 
     nb_intervalles = len(trajectoire) - 1
     nombre_pas = calcul_pas_adapte(trajectoire, pas_maximal)
 
-    traj_disc = np.array([[0., 0., 0., 0., 0., 0.]])
-    var_disc = np.array([[0., 0., 0., 0., 0., 0.]])
+    traj_disc = np.zeros((1, 6))
+    var_disc = np.zeros((1, 6))
+    # traj_disc = np.empty((1, 6))
+    # var_disc = np.empty((1, 6))
 
     for j in range(nb_intervalles):
         nb_pas_j = nombre_pas[j]
@@ -105,33 +107,113 @@ def discretisation_trajectoire(trajectoire, pas_maximal):
             beta = trajectoire[j][4] + i * dbeta
             gamma = trajectoire[j][5] + i * dgamma
 
-            traj_disc = np.concatenate((traj_disc, [[x, y, z, alpha, beta, gamma]]))
-            var_disc = np.concatenate((var_disc, [[dx, dy, dz, dalpha, dbeta, dgamma]]))
+            traj_disc = np.append(traj_disc,
+                                  [[x, y, z, alpha, beta, gamma]],
+                                  axis=0)
+            var_disc = np.append(var_disc,
+                                 [[dx, dy, dz, dalpha, dbeta, dgamma]],
+                                 axis=0)
 
-    print("Traj disc", traj_disc)
-    print(traj_disc.shape)
-    return [traj_disc, var_disc]
+    return traj_disc, var_disc
 
 # Test of discretisation_trajectoire
 # [trj, var] = discretisation_trajectoire(trajectoire, pas_maximal)
+
 
 discretisation_trajectoire(trajectoire, pas_maximal)
 
 
 ##################### Deuxième partie : Longueur des câbles ####################
 
-# On arrive dans la partie du code qui convertit les déplacements infintésimaux du mobile en variations de longueurs des câbles.
-# Pour cette partie on va suivre votre idée d'utiliser des matrices de rotation qui devrait effectivement simplifier votre code.
+# Convertit les déplacements infintésimaux du mobile en variations de longueurs
+# des câbles en utilisant des matrices de rotation.
+
+
+def construction_mobile(dimensions):
+    """
+    Renvoie la liste de taille 8 des coordonnées des points du mobile ; chaque
+    coordonnée de coin du rectangle sera un array de taille 3 (x, y et z).
+    Attention, les croisements ne sont pas pris en compte.
+
+    :param dimensions: dimensions physiques du mobile que l'on souhaite
+    construire, array de dimension 3 (x, y et z)
+    :param pas_maximal: vecteur de taille 6 des pas maximaux
+
+    :type trajectoire: np.array
+    :type pas_maximal: np.array de taille 6
+
+    :return: liste des coordonnées des points du mobile
+    :rtype: np.array
+    """
+    lx = dimensions[0]
+    ly = dimensions[1]
+    lz = dimensions[2]
+
+    A6 = np.array([-lx/2, -ly/2, -lz/2])
+    A7 = np.array([-lx/2, -ly/2, lz/2])
+    A5 = np.array([-lx/2, ly/2, lz/2])
+    A4 = np.array([-lx/2, ly/2, -lz/2])
+    A0 = np.array([lx/2, -ly/2, -lz/2])
+    A1 = np.array([lx/2, -ly/2, lz/2])
+    A3 = np.array([lx/2, ly/2, lz/2])
+    A2 = np.array([lx/2, ly/2, -lz/2])
+
+    mobile = [A0, A1, A2, A3, A4, A5, A6, A7]
+    return mobile
+
+
+def construction_hangar(dimensions):
+    """
+    Renvoie la liste de taille 8 des coordonnées des points du hangar ; chaque
+    coordonnée de coin du rectangle est un array de taille 3 (x, y et z).
+    Le coin A6 doit être placé à l'origine.
+
+    :param dimensions: dimensions physiques du hangar que l'on souhaite
+    construire, array de dimension 3 (x, y et z)
+    :param pas_maximal: vecteur de taille 6 des pas maximaux
+
+    :type trajectoire: np.array
+    :type pas_maximal: np.array de taille 6
+
+    :return: liste des coordonnées des points du hangar
+    :rtype: np.array
+    """
+    lx = dimensions[0]
+    ly = dimensions[1]
+    lz = dimensions[2]
+
+    A6 = np.array([0, 0, 0])
+    A7 = np.array([0, 0, lz])
+    A5 = np.array([0, ly, lz])
+    A4 = np.array([0, ly, 0])
+    A0 = np.array([lx, 0, 0])
+    A1 = np.array([lx, 0, lz])
+    A3 = np.array([lx, ly, lz])
+    A2 = np.array([lx, ly, 0])
+
+    mobile = [A0, A1, A2, A3, A4, A5, A6, A7]
+    return mobile
 
 
 def construction_rectangle(dimensions, centre):
-    # dimensions contient les dimensions physiques du pavé que l'on souhaite construire. Il s'agit d'un np.array de dimension 3 (x, y et z).
-    # centre est un booleen qui indique si l'on doit placer le centre du rectangle sur l'origine ou plutôt le coin A6. True signifie que le centre doit être placé à l'origine (pour le mobile) et False signifie que le coin A6 doit être placé à l'origine.
+    # à supprimer
 
-    # Cette fonction annexe mais utile est celle que vous avez défini dans votre code comme coinHangar.
-    # Je pense qu'elle va effectivement vous permettre d'avoir un code plus simple à lire.
 
-    # Cette fonction renvoie une liste de taille 8 des coordonnées des points du rectangle collé contre l'origine et orienté comme le hangar. Chaque coordonnée de coin du rectangle sera un np.array de dimension 3 (x, y et z)
+
+    # dimensions contient les dimensions physiques du pavé que l'on souhaite
+    # construire. Il s'agit d'un np.array de dimension 3 (x, y et z).
+    # centre est un booleen qui indique si l'on doit placer le centre du
+    # rectangle sur l'origine ou plutôt le coin A6. True signifie que le centre
+    # doit être placé à l'origine (pour le mobile) et False signifie que le
+    # coin A6 doit être placé à l'origine.
+
+    # Cette fonction annexe mais utile est celle que vous avez défini dans
+    # votre code comme coinHangar. Je pense qu'elle va effectivement vous permettre
+    # d'avoir un code plus simple à lire.
+
+    # Cette fonction renvoie une liste de taille 8 des coordonnées des points
+    # du rectangle collé contre l'origine et orienté comme le hangar. Chaque
+    # coordonnée de coin du rectangle sera un np.array de dimension 3 (x, y et z)
     lx = dimensions[0]
     ly = dimensions[1]
     lz = dimensions[2]
@@ -160,32 +242,43 @@ def construction_rectangle(dimensions, centre):
 
 
 def rotation(vecteur_rotation):
-    # vecteur_rotaion est un np_array de dimension 3 avec les 3 angles de rotation
+    """
+    Renvoie la matrice de rotation associée aux angles de rotation.
+    Multiplier un vecteur par la matrice de rotation permettra de lui faire
+    subir les trois rotations.
 
+    :param vecteur_rotation: vecteur des 3 angles de rotation.
+    rho, theta et phi sont des déplacements angulaires du mobile autour des
+    trois vecteurs de la base du hangar.
+
+    :type vecteur_rotation: np.array de taille 3
+
+    :return: produit des trois matrices de rotations données respectivement
+    par les angles rho, theta, et phi
+    :rtype: np.array de dimension 3x3
+    """
     rho = vecteur_rotation[0]
     theta = vecteur_rotation[1]
     phi = vecteur_rotation[2]
 
-    # rho, theta et phi sont des déplacements angulaires du mobile autour des trois vecteurs de la base du hangar.
+    Rx = np.array([[1, 0, 0],
+                   [0, np.cos(rho), np.sin(rho)],
+                   [0, -np.sin(rho), np.cos(rho)]])
 
-    # Je vous propose aussi cette fonction annexe qui pourrait vous être utile. Ele prend en argument trois angles de rotation et renvoie la matrice prosuit des trois rotations obtenues (i.e. Rx*Ry*Rz).
-    # Multiplier une vecteur par la matrice obtenue permettra de lui faire subir les trois rotations.
+    Ry = np.array([[np.cos(theta), 0, -np.sin(theta)],
+                   [0, 1, 0],
+                   [np.sin(theta), 0, np.cos(theta)]])
 
-    # Cette fontion renvoie un np.array de dimensions 3*3 défini comme le produit des trois matrices de rotations données respectivement par les angles rho, theta, phi.
-    Rx = np.array([[1, 0, 0], [0, np.cos(rho), np.sin(rho)], [0, -np.sin(rho), np.cos(rho)]])
+    Rz = np.array([[np.cos(phi), np.sin(phi), 0],
+                   [-np.sin(phi), np.cos(phi), 0],
+                   [0, 0, 1]])
 
-    Ry = np.array([[np.cos(theta), 0, -np.sin(theta)], [0, 1, 0], [np.sin(theta), 0, np.cos(theta)]])
-    Rz = np.array([[np.cos(phi), np.sin(phi), 0], [-np.sin(phi), np.cos(phi), 0], [0, 0, 1]])
-
-    rotationTotale = np.dot(np.dot(Rx, Ry), Rz)
-
-    return rotationTotale
+    return np.dot(np.dot(Rx, Ry), Rz)
 
 
 def reconstruction_coins(position_mobile, dimensions_physiques_mobile):
     # juste passer mobile en argument
     # on appelle ça a chaque fois qu'on change les coordonnees
-
 
     # L'argument position_mobile est un np.array à 6 dimensions, 3 positions + 3 angles, représentant la position actuelle du centre du mobile et son orientation.
     # dimensions_physiques_mobile est un np.array de 3 dimensions représentant longeur, largeur et hauteur du mobile.
@@ -199,7 +292,7 @@ def reconstruction_coins(position_mobile, dimensions_physiques_mobile):
 
     # 1
 
-    mobile = construction_rectangle(dimensions_physiques_mobile, True)
+    mobile = construction_mobile(dimensions_physiques_mobile)
     # ici on fait coincidé le centre du mobile avec le centre du repère du hangar : cf schéma 3DExperience
 
     # 2
@@ -250,7 +343,7 @@ def commande_longeurs_cables(trajectoire_discretisee, dimensions_physiques_mobil
     # - 5 : Mettre à jour les longueurs des cordes.
 
     # Cette fonction renverra un liste des modifications de longueurs des cordes, chaque élément de la liste étant un np.array de dimension 8 dont le ième élément est la variation de longueur de la ième corde.
-    coinsHangar = construction_rectangle(dimensions_physiques_hangar, False)
+    coinsHangar = construction_hangar(dimensions_physiques_hangar)
 
     nombreIteration = len(trajectoire_discretisee[1]) ## obj nombre de pas total
     positionInitiale = trajectoire_discretisee[0][0]  ### ATTENTION JE NE SAIS PAS SI CA FONCTIONNE ET C'EST UN DETAIL IMPORTANT
@@ -287,11 +380,10 @@ coinsMobile = (reconstruction_coins(centre, dimension))
 
 
 dimensionHangar = np.array([1.25, 1.25, 1])
-coinsHangar = construction_rectangle(dimensionHangar, False)
+coinsHangar = construction_hangar(dimensionHangar)
 print(calcul_longueurs_cables(coinsMobile, coinsHangar))
 
-varlongueurCable = commande_longeurs_cables(discretisation_trajectoire(trajectoire, pas_maximal), dimension, dimensionHangar)[0]
-longueurCable = commande_longeurs_cables(discretisation_trajectoire(trajectoire, pas_maximal), dimension, dimensionHangar)[1]
+varlongueurCable, longueurCable = commande_longeurs_cables(discretisation_trajectoire(trajectoire, pas_maximal), dimension, dimensionHangar)
 
 
 var0 = []
@@ -376,7 +468,7 @@ def commande(trajectoire, pas_maximal, dimensions_physiques_mobile, dimensions_p
 
     # Cette fonction renvoie une liste des commandes des moteurs. Chaque commande moteur sera à son tour un np.array de dimension 8 dont le ième élément sera la commande destinée au ième moteur.
     diametreTambour = 0.009
-    trajectoireDiscretise = discretisation_trajectoire(trajectoire, pas_maximal)[1]
+    _, trajectoireDiscretise = discretisation_trajectoire(trajectoire, pas_maximal)
     longueurCable = commande_longeurs_cables(trajectoireDiscretisee, dimensions_physiques_mobile, dimensions_physiques_hangar)
     nombrePosition = len(longueurCable)
     rotationMoteur = []
