@@ -11,6 +11,8 @@ from pylab import *
 
 ############### Première partie : Discrétisation de la trajectoire ############
 
+print("Première partie : Discrétisation de la trajectoire")
+
 # 3 longeurs en m
 pas_translation_x = 0.01
 pas_translation_y = 0.01
@@ -113,7 +115,9 @@ def discretisation_trajectoire(trajectoire, pas_maximal):
     return traj_disc, var_disc
 
 
-##################### Deuxième partie : Longueur des câbles ####################
+##################### Deuxième partie : Longueur des câbles ###################
+
+print("Deuxième partie : Longueur et variation de longueur des câbles")
 
 # Convertit les déplacements infintésimaux du mobile en variations de longueurs
 # des câbles en utilisant des matrices de rotation.
@@ -192,17 +196,17 @@ def construction_rectangle(dimensions, centre):
     # coin A6 doit être placé à l'origine.
 
     # Cette fonction annexe mais utile est celle que vous avez défini dans
-    # votre code comme coinHangar. Je pense qu'elle va effectivement vous permettre
-    # d'avoir un code plus simple à lire.
+    # votre code comme coinHangar. Je pense qu'elle va effectivement vous
+    # permettre d'avoir un code plus simple à lire.
 
     # Cette fonction renvoie une liste de taille 8 des coordonnées des points
     # du rectangle collé contre l'origine et orienté comme le hangar. Chaque
-    # coordonnée de coin du rectangle sera un np.array de dimension 3 (x, y et z)
+    # coordonnée de coin du rectangle sera un np.array de dimension 3
     lx = dimensions[0]
     ly = dimensions[1]
     lz = dimensions[2]
 
-    if centre: # attention, croisement pas pris en compte
+    if centre:  # attention, croisement pas pris en compte
         A6 = np.array([-lx/2, -ly/2, -lz/2])
         A7 = np.array([-lx/2, -ly/2, lz/2])
         A5 = np.array([-lx/2, ly/2, lz/2])
@@ -468,23 +472,37 @@ plt.legend()
 plt.show()
 
 
-######################## Troisième partie : Commande du robot ##################
+######################## Troisième partie : Commande du robot #################
+
+print("Troisème partie : Commande du robot")
 
 
 def commande(trajectoire, pas_maximal, dimensions_mobile, dimensions_hangar):
-    # Les définitions de tous les arguments sont données respectivement dans discretisation_trajectoire, calcul_pas_adapte, reconstruction_coins, commande_longeurs_cables
+    # Les définitions de tous les arguments sont données respectivement dans
+    # discretisation_trajectoire, calcul_pas_adapte, reconstruction_coins,
+    # commande_longeurs_cables
 
-    # Cette fonction est la fonction de haut niveau dont on se servira pour commander la maquette.
-    # Elle prend en argument la trajectoire souhaitée et renvoie la commande à passer aux moteurs.
+    # Cette fonction est la fonction de haut niveau dont on se servira pour
+    # commander la maquette.
+    # Elle prend en argument la trajectoire souhaitée et renvoie la commande à
+    # passer aux moteurs.
     # Ces étapes de fonctionnement sont :
     # - 1 : On discrétise la trajectoire donnée en argument.
-    # - 2 : On déduit de la trajectoire discrétisée les variations de longueurs des câbles.
-    # - 3 : On traduit ces variations de longueur des câbles en commande de rotation angulaire des moteurs.
+    # - 2 : On déduit de la trajectoire discrétisée les variations de longueurs
+    # des câbles.
+    # - 3 : On traduit ces variations de longueur des câbles en commande de
+    # rotation angulaire des moteurs.
 
-    # Cette fonction renvoie une liste des commandes des moteurs. Chaque commande moteur sera à son tour un np.array de dimension 8 dont le ième élément sera la commande destinée au ième moteur.
+    # Cette fonction renvoie une liste des commandes des moteurs. Chaque
+    # commande moteur sera à son tour un np.array de dimension 8 dont le ième
+    # élément sera la commande destinée au ième moteur.
+
     diametreTambour = 0.009
-    _, trajectoireDiscretise = discretisation_trajectoire(trajectoire, pas_maximal)
-    longueurCable, _ = commande_longeurs_cables(trajectoireDiscretisee, dimensions_mobile, dimensions_hangar)[0]
+    _, trajectoireDiscretisee = discretisation_trajectoire(trajectoire,
+                                                           pas_maximal)
+    longueurCable, _ = commande_longeurs_cables(trajectoireDiscretisee,
+                                                dimensions_mobile,
+                                                dimensions_hangar)
     nombrePosition = len(longueurCable)
     rotationMoteur = []
     for i in range(nombrePosition):
@@ -494,20 +512,25 @@ def commande(trajectoire, pas_maximal, dimensions_mobile, dimensions_hangar):
     return rotation
 
 
-origine = np.array([0., 0., 0., 0., 0., 0.])
-destination = np.array([0.5, 0., 0., 0, 0, 0])
+# origine = np.array([0., 0., 0., 0., 0., 0.])
+# destination = np.array([0.5, 0., 0., 0, 0, 0])
 # n = calcul_pas_adapte(origine, destination, pas_maximal)
 
 
 ######################## Quatrième partie : Initialisation ##################
 
-# L'objectif de cette partie est de faire l'initialisation visuelle de la maquette pour cela on aura un bouton et un numéro du moteur on pourra donc faire tourner manuellement le moteur
+print("Quatrième partie : Initialisation de la maquette")
+
+# L'objectif de cette partie est de faire l'initialisation visuelle de la
+# maquette. Pour cela on aura un bouton et un numéro du moteur on pourra donc
+# faire tourner manuellement le moteur
 
 
 def initialisationRotation(numeroMoteur, bouton):
-    # cette fonction prend en argument le numéro du moteur qui est un entier et un bouton qui est fait un True/False
+    # cette fonction prend en argument le numéro du moteur qui est un entier et
+    # un bouton qui est fait un True/False
     diametreTambour = 0.009
     rotationMoteur = [0 for k in range(8)]
     if bouton:
-        rotationMoteur = arctan(0.01/diametreTambour)
+        rotationMoteur = math.arctan(0.01/diametreTambour)
     return rotationMoteur
