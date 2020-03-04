@@ -5,6 +5,7 @@
 # On considère le pas de temps comme imposé dans la cadre arduino
 
 import numpy as np
+import matplotlib.pyplot as plt
 import math
 from pylab import *
 
@@ -53,11 +54,6 @@ def calcul_pas_adapte(trajectoire, pas_maximal):
                                        trajectoire[j][i]) / pas_maximal[i]
         nombre_pas[j] = math.ceil(np.amax(nombre_pas_detail))
     return nombre_pas
-
-
-trajectoire = np.random.rand(10, 6)
-# print("Trajectoire :\n", trajectoire)
-# print(calcul_pas_adapte(trajectoire, pas_maximal))
 
 
 def discretisation_trajectoire(trajectoire, pas_maximal):
@@ -115,12 +111,6 @@ def discretisation_trajectoire(trajectoire, pas_maximal):
                                  axis=0)
 
     return traj_disc, var_disc
-
-# Test of discretisation_trajectoire
-# [trj, var] = discretisation_trajectoire(trajectoire, pas_maximal)
-
-
-discretisation_trajectoire(trajectoire, pas_maximal)
 
 
 ##################### Deuxième partie : Longueur des câbles ####################
@@ -297,6 +287,7 @@ def reconstruction_coins(position_mobile, dimensions_mobile):
     :param position_mobile: np.array de taille 6 (3 positions, 3 angles)
     représentant la position actuelle du centre du mobile et son orientation.
     :param dimensions_mobile: np.array de taille 3 (longueur, largeur, hauteur)
+    représentant les dimensions physiques du mobile.
 
     :type position_mobile: np.array de taille 6
     :type dimensions_mobile: np.array de taille 3
@@ -358,48 +349,79 @@ def calcul_longueurs_cables(pos_coins_mobile, pos_coins_hangar):
     return longueurCable
 
 
-def commande_longeurs_cables(trajectoire_discretisee, dimensions_physiques_mobile, dimensions_physiques_hangar):
-    # Cette fonction prend en argument la trajectoire discrétisée dans la première partie du code, chaque point de la trajectoire étant un np.array de dimension 6, 3positions + 3 angles.
-    # dimensions_physiques_mobile est cohérent avec la définition donnée dans reconstruction_coins.
-    # dimensions_physiques_hangar est défini comme dimensions_physiques_mobile mais pour le hangar.
+def commande_longeurs_cables(traj_disc, dimensions_mobile, dimensions_hangar):
+    """
+    Convertit la trajectoire discrétisée (liste des déplacements infinitésimaux
+    qu'il faut réaliser pour parcourir la trajectoire souhaitée) en la liste
+    des modifications infinitésimales des longueurs des câbles.
 
-    # Cette fonction va prendre en argument la trajectoire discrétisée, i.e. la liste des déplacements infintésimaux qu'il faut réaliser pour parcourir la trajectoire souhaitée, et va la convertir en une liste de modifications infintésimales des longueurs de corde.
-    # Pour cela, on doit garder en mémoire (dans des variables locales) la position actuelle du module (np.array de 6 dimensions, 3 positions + 3 angles) ainsi que les longueurs actuelles des cordes (un np.array de dimension 8).
+    #################################
+    ##### Plutôt var_disc non ? #####
+    #################################
 
-    # Pour chaque déplacement infintésimal dans cette boucle on devra :
-    # - 1 : Mettre à jour la position mémorisée du mobile (selon les 6 dimensions).
-    # - 2 : Reconstruire les coins du mobile (en prenant en compte l'orientation avec reconstruction_coins).
-    # - 3 : Calculer les nouvelles longueurs des cordes.
-    # - 4 : En déduire les variations des longueurs des cordes par rapport à celles de l'état précédent.
-    # - 5 : Mettre à jour les longueurs des cordes.
+    Pour cela, on doit garder en mémoire (dans des variables locales) la
+    position actuelle du module (6 valeurs), ainsi que les longueurs actuelles
+    des cordes.
 
-    # Cette fonction renverra un liste des modifications de longueurs des cordes, chaque élément de la liste étant un np.array de dimension 8 dont le ième élément est la variation de longueur de la ième corde.
-    coinsHangar = construction_hangar(dimensions_physiques_hangar)
+    Pour chaque déplacement infintésimal dans cette boucle on devra :
+    1. Mettre à jour la position mémorisée du mobile (selon les 6 dimensions) ;
+    2. Reconstruire les coins du mobile (en prenant en compte l'orientation
+    avec reconstruction_coins) ;
+    3. Calculer les nouvelles longueurs des cordes ;
+    4. En déduire les variations des longueurs des cordes par rapport à celles
+    de l'état précédent ;
+    5. Mettre à jour les longueurs des cordes.
 
-    nombreIteration = len(trajectoire_discretisee[1]) ## obj nombre de pas total
-    positionInitiale = trajectoire_discretisee[0][0]  ### ATTENTION JE NE SAIS PAS SI CA FONCTIONNE ET C'EST UN DETAIL IMPORTANT
-    coinsPositionInit = reconstruction_coins(positionInitiale, dimensions_physiques_mobile)
+
+    :param traj_disc: trajectoire discrétisée dans la première partie du code,
+    chaque point de la trajectoire est un np.array de taille 6.
+    :param dimensions_mobile: np.array de taille 3 (longueur, largeur, hauteur)
+    représentant les dimensions physiques du mobile.
+    :param dimensions_hangar: np.array de taille 3 (longueur, largeur, hauteur)
+    représentant les dimensions physiques du hangar.
+
+    :type traj_disc: np.array de taille 6
+    :type dimensions_mobile: np.array de taille 3
+    :type dimensions_hangar: np.array de taille 3
+
+    :return: liste des variations des longueurs des cordes, chaque élément de
+    la liste étant un np.array de dimension 8 dont le ième élément est la
+    variation de longueur de la ième corde ; liste des longeurs des cordes pour
+    chaque itération.
+    :rtype: (np.array, np.array)
+    """
+
+    coinsHangar = construction_hangar(dimensions_hangar)
+
+    # objectif : nombre de pas total
+    nombreIteration = len(traj_disc[1])
+    # ATTENTION JE NE SAIS PAS SI CA FONCTIONNE ET C'EST UN DETAIL IMPORTANT
+    positionInitiale = traj_disc[0][0]
+    coinsPositionInit = reconstruction_coins(positionInitiale, dimensions_mobile)
 
     longueursCableInit = calcul_longueurs_cables(coinsPositionInit, coinsHangar)
     tableauVarLongueur = []
     tableauLongueur = []  # test
-    for n in range(1, nombreIteration):
+    for dt in range(1, nombreIteration):
 
-        nouvellePosition = positionInitiale + trajectoire_discretisee[1][n]
-        coinsNouvellePosition = reconstruction_coins(nouvellePosition, dimensions_physiques_mobile)
-        nouvellesLongueursCables = calcul_longueurs_cables(coinsNouvellePosition, coinsHangar)
-        variationLongueur = nouvellesLongueursCables-longueursCableInit
-        tableauVarLongueur += [variationLongueur]
-        tableauLongueur += [nouvellesLongueursCables] ##test
+        nouvellePosition = positionInitiale + traj_disc[1][dt]
+        coinsNouvellePosition = reconstruction_coins(nouvellePosition,
+                                                     dimensions_mobile)
+        nouvellesLongueursCables = calcul_longueurs_cables(
+                                    coinsNouvellePosition, coinsHangar)
+        variationLongueur = nouvellesLongueursCables - longueursCableInit
+        tableauVarLongueur.append(variationLongueur)
+        tableauLongueur.append(nouvellesLongueursCables)  # test
         longueursCableInit = nouvellesLongueursCables
         positionInitiale = nouvellePosition
 
-    return [tableauVarLongueur, tableauLongueur]  # on retourne une liste des variations de longueur des cables
+    # on retourne une liste des variations de longueur des cables
+    return tableauLongueur, tableauVarLongueur
 
 
-# Definir la trajectoire
-origine = np.array([0, 0, 0, 0, 0, 0])
-destination = np.array([0.5, 0.5, 0.5, 0, 0, 0])
+# Définir la trajectoire
+# origine = np.array([0, 0, 0, 0, 0, 0])
+# destination = np.array([0.5, 0.5, 0.5, 0, 0, 0])
 
 # trajectoire = np.array([origine], dtype=float)
 # trajectoire = np.insert(trajectoire, 1, destination, 0)
@@ -414,80 +436,42 @@ dimensionHangar = np.array([1.25, 1.25, 1])
 coinsHangar = construction_hangar(dimensionHangar)
 print(calcul_longueurs_cables(coinsMobile, coinsHangar))
 
-varlongueurCable, longueurCable = commande_longeurs_cables(discretisation_trajectoire(trajectoire, pas_maximal), dimension, dimensionHangar)
+longueurCable, varlongueurCable = commande_longeurs_cables(
+            discretisation_trajectoire(trajectoire, pas_maximal),
+            dimension,
+            dimensionHangar)
 
-
-var0 = []
-var1 = []
-var2 = []
-var3 = []
-var4 = []
-var5 = []
-var6 = []
-var7 = []
 
 n = len(varlongueurCable)
 print(n)
 
-for i in range(n):
-    var0.append(varlongueurCable[i][0])
-    var1.append(varlongueurCable[i][1])
-    var2.append(varlongueurCable[i][2])
-    var3.append(varlongueurCable[i][3])
-    var4.append(varlongueurCable[i][4])
-    var5.append(varlongueurCable[i][5])
-    var6.append(varlongueurCable[i][6])
-    var7.append(varlongueurCable[i][7])
 
-subplot(1, 2, 1)
+temps = list(range(n))
 
-x = list(range(n))
-plot(x, var0, label='Cable 0')
-plot(x, var1, label='Cable 1')
-plot(x, var2, label='Cable 2')
-plot(x, var3, label='Cable 3')
-plot(x, var4, label='Cable 4')
-plot(x, var5, label='Cable 5')
-plot(x, var6, label='Cable 6')
-plot(x, var7, label='Cable 7')
-legend()
+# Tracé des variations de longueur des câbles i
+plt.subplot(1, 2, 1)
+for cable in range(8):
+    plt.plot(temps,
+             [varlongueurCable[i][cable] for i in range(n)],
+             label='Cable '+str(cable))
 
-long0 = []
-long1 = []
-long2 = []
-long3 = []
-long4 = []
-long5 = []
-long6 = []
-long7 = []
+plt.legend()
 
-for i in range(n):
-    long0.append(longueurCable[i][0])
-    long1.append(longueurCable[i][1])
-    long2.append(longueurCable[i][2])
-    long3.append(longueurCable[i][3])
-    long4.append(longueurCable[i][4])
-    long5.append(longueurCable[i][5])
-    long6.append(longueurCable[i][6])
-    long7.append(longueurCable[i][7])
+# Tracé des longueurs des câbles i
+plt.subplot(1, 2, 2)
+for cable in range(8):
+    plt.plot(temps,
+             [longueurCable[i][cable] for i in range(n)],
+             label='Cable '+str(cable))
 
-subplot(1, 2, 2)
-
-plot(x, long0, label='Cable 0')
-plot(x, long1, label='Cable 1')
-plot(x, long2, label='Cable 2')
-plot(x, long3, label='Cable 3')
-plot(x, long4, label='Cable 4')
-plot(x, long5, label='Cable 5')
-plot(x, long6, label='Cable 6')
-plot(x, long7, label='Cable 7')
-show()
+plt.legend()
+plt.show()
 
 
 ######################## Troisième partie : Commande du robot ##################
 
 
-def commande(trajectoire, pas_maximal, dimensions_physiques_mobile, dimensions_physiques_hangar):
+def commande(trajectoire, pas_maximal, dimensions_mobile, dimensions_hangar):
     # Les définitions de tous les arguments sont données respectivement dans discretisation_trajectoire, calcul_pas_adapte, reconstruction_coins, commande_longeurs_cables
 
     # Cette fonction est la fonction de haut niveau dont on se servira pour commander la maquette.
@@ -500,7 +484,7 @@ def commande(trajectoire, pas_maximal, dimensions_physiques_mobile, dimensions_p
     # Cette fonction renvoie une liste des commandes des moteurs. Chaque commande moteur sera à son tour un np.array de dimension 8 dont le ième élément sera la commande destinée au ième moteur.
     diametreTambour = 0.009
     _, trajectoireDiscretise = discretisation_trajectoire(trajectoire, pas_maximal)
-    longueurCable = commande_longeurs_cables(trajectoireDiscretisee, dimensions_physiques_mobile, dimensions_physiques_hangar)
+    longueurCable, _ = commande_longeurs_cables(trajectoireDiscretisee, dimensions_mobile, dimensions_hangar)[0]
     nombrePosition = len(longueurCable)
     rotationMoteur = []
     for i in range(nombrePosition):
