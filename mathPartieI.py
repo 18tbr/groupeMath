@@ -137,12 +137,10 @@ def construction_mobile(dimensions):
 
     :param dimensions: dimensions physiques du mobile que l'on souhaite
     construire, array de dimension 3 (x, y et z)
-    :param pas_maximal: vecteur de taille 6 des pas maximaux
 
-    :type trajectoire: np.array
-    :type pas_maximal: np.array de taille 6
+    :type dimensions: np.array
 
-    :return: liste des coordonnées des points du mobile
+    :return: liste de taille 8 des coordonnées des points du mobile
     :rtype: np.array
     """
     lx = dimensions[0]
@@ -170,12 +168,10 @@ def construction_hangar(dimensions):
 
     :param dimensions: dimensions physiques du hangar que l'on souhaite
     construire, array de dimension 3 (x, y et z)
-    :param pas_maximal: vecteur de taille 6 des pas maximaux
 
     :type trajectoire: np.array
-    :type pas_maximal: np.array de taille 6
 
-    :return: liste des coordonnées des points du hangar
+    :return: liste de taille 8 des coordonnées des points du hangar
     :rtype: np.array
     """
     lx = dimensions[0]
@@ -191,14 +187,12 @@ def construction_hangar(dimensions):
     A3 = np.array([lx, ly, lz])
     A2 = np.array([lx, ly, 0])
 
-    mobile = [A0, A1, A2, A3, A4, A5, A6, A7]
-    return mobile
+    hangar = [A0, A1, A2, A3, A4, A5, A6, A7]
+    return hangar
 
 
 def construction_rectangle(dimensions, centre):
     # à supprimer
-
-
 
     # dimensions contient les dimensions physiques du pavé que l'on souhaite
     # construire. Il s'agit d'un np.array de dimension 3 (x, y et z).
@@ -276,54 +270,91 @@ def rotation(vecteur_rotation):
     return np.dot(np.dot(Rx, Ry), Rz)
 
 
-def reconstruction_coins(position_mobile, dimensions_physiques_mobile):
-    # juste passer mobile en argument
-    # on appelle ça a chaque fois qu'on change les coordonnees
+def reconstruction_coins(position_mobile, dimensions_mobile):
+    """
+    Calcule la liste des positions des 8 coins du mobile à partir des
+    dimensions et des coordonnées du centre du mobile.
+    Renvoie la liste des positions des 8 coins. Chaque position est un
+    np.array de taille 3 (x, y, z).
+    On appelle cette fonction à chaque fois que l'on change les
+    coordonnées du mobile.
+    Méthode :
+    1. Création du mobile de bonnes dimensions mais en faisant coincider le
+    centre du mobile avec le centre du repère du hangar ;
+    2. Orientation du mobile pour qu'il soit aligné avec l'orientation donnée
+    par base_mobile (en utilisant des matrices de rotation pour arriver à
 
-    # L'argument position_mobile est un np.array à 6 dimensions, 3 positions + 3 angles, représentant la position actuelle du centre du mobile et son orientation.
-    # dimensions_physiques_mobile est un np.array de 3 dimensions représentant longeur, largeur et hauteur du mobile.
+    #######################################
+    ##### Qu'est ce que base_mobile ? #####
+    #######################################
 
-    # Pour l'écriture de cette fonction on va reprendre en grande partie ce que vous avez déjà fait :
-    # - 1 : On crée un image du mobile aux dimensions mais aligné avec la base du hangar et collé contre l'origine.
-    # - 2 : On oriente le mobile pour qu'il soit aligné avec l'orientation donnée par base_mobile (en utilisant des matrices de rotation pour arriver à l'orientation souhaitée depuis l'orientation d'origine du hangar).
-    # - 3 : On déplace le mobile pour que son centre se retrouve à la position donnée par position_mobile.
+    l'orientation souhaitée depuis l'orientation d'origine du hangar) ;
+    3. Déplacement du mobile pour que son centre se retrouve à la position
+    donnée par position_mobile.
 
-    # Cette fonction renverra un liste de 8 éléments des positions des huits coins dans l'espace. La position d'un coin sera un np.array de dimension 3 (x, y et z)
+    A faire : passer mobile en argument ?
 
-    # 1
+    :param position_mobile: np.array de taille 6 (3 positions, 3 angles)
+    représentant la position actuelle du centre du mobile et son orientation.
+    :param dimensions_mobile: np.array de taille 3 (longueur, largeur, hauteur)
 
-    mobile = construction_mobile(dimensions_physiques_mobile)
-    # ici on fait coincidé le centre du mobile avec le centre du repère du hangar : cf schéma 3DExperience
+    :type position_mobile: np.array de taille 6
+    :type dimensions_mobile: np.array de taille 3
+
+    :return: liste de 8 éléments des positions des huits coins
+    :rtype: liste
+    """
+
+    # 1.
+    mobile = construction_mobile(dimensions_mobile)
 
     # 2
     orientation = position_mobile[3:6]
-    rotation_mobile=rotation(orientation)
+    rotation_mobile = rotation(orientation)
 
     # 3
     translationCentre = position_mobile[0:3]
 
-    for indice in range(8):
-        mobile[indice] = np.dot(rotation_mobile, mobile[indice])  # 2
-        mobile[indice] = mobile[indice] + translationCentre  # 3
+    for coord in range(8):
+        mobile[coord] = np.dot(rotation_mobile, mobile[coord])  # 2
+        mobile[coord] += translationCentre  # 3
 
     return mobile
 
 
-def calcul_longueurs_cables(positions_coins_mobile, positions_coins_hangar):
-    # L'argument positions_coins_mobile est une liste (de taille 8) des coins du mobile, chaque coin étant donnée sous la forme d'un np.array de dimension 3 (x, y et z) dans l'ordre de la numérotation donnée sur votre schéma.
-    # De même positions_coins_hangar est une liste (de taille 8) des positions des coins du hangar, chaque position étant un np.array de dimension 3 et l'ordre étant celui donnée sur votre schéma.
+def calcul_longueurs_cables(pos_coins_mobile, pos_coins_hangar):
+    """
+    Renvoie les longueurs des 8 câbles correspondant à la position du mobile
+    dans le hangar.
+    Les câbles étant croisés dans le hangar, on introduit en (a) une liste de
+    changements d'indices.
 
-    # Pour l'écriture de cette fonction on peut complémtement reprendre ce que vous avez fait, notamment le fait d'utiliser une liste de correspondances est une bonne idée pour avoir un code plus compact.
+    :param pos_coins_mobile: liste des positions des 8 coins du mobile, chaque
+    position étant un np.array de taille 3 (x, y, z) dans l'ordre de la
+    numérotation donnée sur le schéma.
+    :param pos_coins_hangar: liste des positions des 8 coins du hangar, chaque
+    position étant un np.array de taille 3 (x, y, z) dans l'ordre de la
+    numérotation donnée sur le schéma.
 
-    # Cette fonction renverra un np.array de 8 éléments, le ième élément correspondant à la longueur du ième câble.
+    #########################
+    ##### Quel schéma ? #####
+    #########################
 
-    numerotationHangar = [i for i in range(8)]
-    numerotationCableBoite = [6, 7, 4, 5, 2, 3, 0, 1]  # on est pour le mobile on a donc numéroté les coins du hangar et les cables qui y sont associés (eg : le coinMobile en face du coinHangar6 est 0)
+    :type pos_coins_mobile: np.array
+    :type pos_coins_hangar: np.array
+
+    :return: vecteur des longueurs des 8 câbles
+    :rtype: np.array de taille 8
+    """
+
     longueurCable = np.zeros(8)
+    # (a)
+    chgt_num = [6, 7, 4, 5, 2, 3, 0, 1]
 
-    for i in range(8):
-        vecteurCoins = positions_coins_mobile[numerotationCableBoite[i]] - positions_coins_hangar[i]
-        longueurCable[i] = np.linalg.norm(vecteurCoins)
+    for cable in range(8):
+        vecteurCoins = pos_coins_mobile[chgt_num[cable]] - pos_coins_hangar[cable]
+        longueurCable[cable] = np.linalg.norm(vecteurCoins)
+
     return longueurCable
 
 
@@ -351,7 +382,7 @@ def commande_longeurs_cables(trajectoire_discretisee, dimensions_physiques_mobil
 
     longueursCableInit = calcul_longueurs_cables(coinsPositionInit, coinsHangar)
     tableauVarLongueur = []
-    tableauLongueur = [] ##test
+    tableauLongueur = []  # test
     for n in range(1, nombreIteration):
 
         nouvellePosition = positionInitiale + trajectoire_discretisee[1][n]
@@ -481,7 +512,7 @@ def commande(trajectoire, pas_maximal, dimensions_physiques_mobile, dimensions_p
 
 origine = np.array([0., 0., 0., 0., 0., 0.])
 destination = np.array([0.5, 0., 0., 0, 0, 0])
-n = calcul_pas_adapte(origine, destination, pas_maximal)
+# n = calcul_pas_adapte(origine, destination, pas_maximal)
 
 
 ######################## Quatrième partie : Initialisation ##################
