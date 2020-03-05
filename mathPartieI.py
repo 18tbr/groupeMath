@@ -374,7 +374,7 @@ def commande_longeurs_cables(traj_disc, dimensions_mobile, dimensions_hangar):
     position actuelle du module (6 valeurs), ainsi que les longueurs actuelles
     des cordes.
 
-    Pour chaque déplacement infintésimal dans cette boucle on devra :
+    Pour chaque déplacement infinitésimal dans cette boucle on devra :
     1. Mettre à jour la position mémorisée du mobile (selon les 6 dimensions) ;
     2. Reconstruire les coins du mobile (en prenant en compte l'orientation
     avec reconstruction_coins) ;
