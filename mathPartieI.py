@@ -11,7 +11,7 @@ from pylab import *
 
 ############### Première partie : Discrétisation de la trajectoire ############
 
-print("Première partie : Discrétisation de la trajectoire")
+print("\n### Première partie : Discrétisation de la trajectoire ###\n")
 
 # 3 longeurs en m
 pas_translation_x = 0.01
@@ -25,6 +25,13 @@ pas_rotation_gamma = 3.14/180
 pas_maximal = np.array([pas_translation_x, pas_translation_y,
                         pas_translation_z, pas_rotation_alpha,
                         pas_rotation_beta, pas_rotation_gamma])
+
+print("pas_translation_x :  %.3f m" % pas_translation_x)
+print("pas_translation_y :  %.3f m" % pas_translation_y)
+print("pas_translation_z :  %.3f m" % pas_translation_z)
+print("pas_rotation_alpha : %.4f rad" % pas_rotation_alpha)
+print("pas_rotation_beta :  %.4f rad" % pas_rotation_beta)
+print("pas_rotation_gamma : %.4f rad" % pas_rotation_gamma)
 
 
 def calcul_pas_adapte(trajectoire, pas_maximal):
@@ -117,7 +124,7 @@ def discretisation_trajectoire(trajectoire, pas_maximal):
 
 ##################### Deuxième partie : Longueur des câbles ###################
 
-print("Deuxième partie : Longueur et variation de longueur des câbles")
+print("\n### Deuxième partie : Longueur et variation de longueur des câbles ###\n")
 
 # Convertit les déplacements infintésimaux du mobile en variations de longueurs
 # des câbles en utilisant des matrices de rotation.
@@ -406,6 +413,7 @@ def commande_longeurs_cables(traj_disc, dimensions_mobile, dimensions_hangar):
     longueursCableInit = calcul_longueurs_cables(coinsPositionInit, coinsHangar)
     tableauVarLongueur = []
     tableauLongueur = []  # test
+
     for dt in range(1, nombreIteration):
 
         nouvellePosition = positionInitiale + traj_disc[1][dt]
@@ -430,15 +438,17 @@ def commande_longeurs_cables(traj_disc, dimensions_mobile, dimensions_hangar):
 # trajectoire = np.array([origine], dtype=float)
 # trajectoire = np.insert(trajectoire, 1, destination, 0)
 trajectoire = np.random.rand(10, 6)
-
+# print("Trajectoire : %s" % trajectoire)
 centre = np.array([0, 0, 0, 0, 0, 0])
 dimension = np.array([0.25, 0.25, 0.3])
+print("Dimensions du mobile : %s" % dimension)
 coinsMobile = (reconstruction_coins(centre, dimension))
 
 
 dimensionHangar = np.array([1.25, 1.25, 1])
+print("Dimensions du hangar : %s" % dimensionHangar)
 coinsHangar = construction_hangar(dimensionHangar)
-print(calcul_longueurs_cables(coinsMobile, coinsHangar))
+# print(calcul_longueurs_cables(coinsMobile, coinsHangar))
 
 longueurCable, varlongueurCable = commande_longeurs_cables(
             discretisation_trajectoire(trajectoire, pas_maximal),
@@ -447,11 +457,13 @@ longueurCable, varlongueurCable = commande_longeurs_cables(
 
 
 n = len(varlongueurCable)
-print(n)
+# print(n)
 
 
 temps = list(range(n))
 
+
+print("\nTracé des courbes...")
 # Tracé des variations de longueur des câbles i
 plt.subplot(1, 2, 1)
 for cable in range(8):
@@ -474,7 +486,7 @@ plt.show()
 
 ######################## Troisième partie : Commande du robot #################
 
-print("Troisème partie : Commande du robot")
+print("\n### Troisème partie : Commande du robot ###\n")
 
 
 def commande(trajectoire, pas_maximal, dimensions_mobile, dimensions_hangar):
@@ -519,7 +531,7 @@ def commande(trajectoire, pas_maximal, dimensions_mobile, dimensions_hangar):
 
 ######################## Quatrième partie : Initialisation ##################
 
-print("Quatrième partie : Initialisation de la maquette")
+print("\n### Quatrième partie : Initialisation de la maquette ###\n")
 
 # L'objectif de cette partie est de faire l'initialisation visuelle de la
 # maquette. Pour cela on aura un bouton et un numéro du moteur on pourra donc
