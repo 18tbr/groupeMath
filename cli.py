@@ -1,18 +1,19 @@
 import os
 import sys
-import pickle   # pickle is in stdlib so we won't ever get an import error here.
-import argparse # same, argparse is part of stdlib
-from textwrap import fill # same, part of stdlib
+import pickle  # pickle is in stdlib so we won't ever get an import error here.
+import argparse  # same, argparse is part of stdlib
+from textwrap import fill  # same, part of stdlib
 try:
     import numpy as np
 except ImportError:
     print("---X This tools requires the numpy module, which seems currently unavailable. Please install numpy before tying to use this tool. The recommended syntax to install numpy is :\n$ python3 -m pip install numpy")
     sys.exit(1)
 try:
-    import cable_robot as cr    # Our module to command the robot.
+    import cable_robot as cr  # Our module to command the robot.
 except ImportError:
     print("---X This command line tool is an interface to a python module (more like script actually) called cable_robot. In order to use this tool you must first make sure that this module is available (it currently isn't). The recommended way to do this is to grab the source code cable_robot.py and put it in the same directory as this cli.py file. The source code for cable_robot is available freely on GitHub at [...].")
     sys.exit(1)
+
 
 class CLI(object):
     """docstring for CLI."""
@@ -33,7 +34,7 @@ class CLI(object):
         self.halt_list = ["halt", "HALT", "Halt", "h", "H", "stop", "STOP", "Stop", "s", "S"]
         self.time_step = 0.1
         # Full output by default.
-        self.silence =  2 - cli_args.verbosity
+        self.silence = 2 - cli_args.verbosity
         # Safe mode, annoys users for their safety
         self.safe = not cli_args.unsafe
         self.speed_limit = 100  # steps per second, above that value the robot is deemed unstable.
@@ -149,7 +150,7 @@ class CLI(object):
         # We have found the trajectory file, we now need to find how to read it.
         method = ""
         if len(split_command) == cursor:
-            #i.e. no other argument, we have to guess how to read the file. Our guess will of course rely on the file's extension.
+            # i.e. no other argument, we have to guess how to read the file. Our guess will of course rely on the file's extension.
             self.bprint("Guessing how to read the file ...")
             file_name, extension = os.path.splitext(file_path)
 
@@ -205,7 +206,7 @@ class CLI(object):
                 return
         elif method == "csv":
             try:
-                array = np.loadtxt(file_path, dtype=float, delimiter = ',')
+                array = np.loadtxt(file_path, dtype=float, delimiter=',')
             except Exception as e:
                 # Well, I guess I could get used to this. But really, the numpy documentation never seems to mention the raised exceptions
                 self.bprint(f"The data in the file {file_path} could not be loaded. Consider explicitely telling the tool how to open your file, or using another format if the problem persists.", 2)
@@ -306,7 +307,7 @@ class CLI(object):
         # Caught by read_command, we haven't found any suitable file
         raise FileNotFoundError()
 
-    def bprint(self, msg, mode = 0):
+    def bprint(self, msg, mode=0):
         # mode 0 means information, 1 means warning and 2 means error
         wrapped_msg_list = []
         for line in iter(msg.splitlines()):
@@ -479,7 +480,6 @@ class CLI(object):
                         return
 
 
-
 if __name__ == '__main__':
     # Command line arguments parsing
     parser = argparse.ArgumentParser(description='Command line frontend used to command cable driven robots.', epilog="This tool and the cable robot library were designed by student of the Ecole des Mines de Paris and all of the source code is available at [...] under the GPL 3 License.")
@@ -511,6 +511,6 @@ if __name__ == '__main__':
             command = input(">> ")
             cli.read_command(command)
         except EOFError:
-            print("exit") # In order to avoid ugly output
+            print("exit")  # In order to avoid ugly output
             cli.exit()
             break
