@@ -286,7 +286,7 @@ def reconstruction_coins(position_mobile, dimensions_mobile):
     par base_mobile (en utilisant des matrices de rotation pour arriver à
 
     #######################################
-    ##### Qu'est ce que base_mobile ? #####
+    ##### Qu'est ce que base_mobile ? ##### position_mobile[3:6]
     #######################################
 
     l'orientation souhaitée depuis l'orientation d'origine du hangar) ;
